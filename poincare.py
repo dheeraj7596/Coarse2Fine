@@ -30,7 +30,7 @@ if __name__ == "__main__":
                 for w in filtered_words:
                     relations.add((w, child_label))
 
-    print("Number of relations: ", relations)
+    print("Number of relations: ", len(relations))
     model = PoincareModel(list(relations))
     model.train(epochs=1, print_every=500)
     pass
