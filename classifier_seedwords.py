@@ -222,5 +222,7 @@ if __name__ == "__main__":
     print("Number of training samples: ", len(features))
     feature_vec = np.array(features)
     label_vec = np.array(seed_labels)
+    print(feature_vec)
+    print(label_vec)
     clf = LogisticRegression().fit(feature_vec, label_vec)
     pickle.dump(clf, open(data_path + "clf_logreg.pkl", "wb"))
