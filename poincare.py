@@ -3,6 +3,7 @@ from gensim.models.poincare import PoincareModel
 from nltk.corpus import stopwords
 
 if __name__ == "__main__":
+    # base_path = "/data4/dheeraj/coarse2fine/"
     base_path = "./data/"
     dataset = "nyt"
     data_path = base_path + dataset + "/"
@@ -29,6 +30,7 @@ if __name__ == "__main__":
                 for w in filtered_words:
                     relations.add((w, child_label))
 
+    print("Number of relations: ", relations)
     model = PoincareModel(list(relations))
     model.train(epochs=1, print_every=500)
     pass
