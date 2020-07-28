@@ -110,9 +110,11 @@ def get_feature(df, parent_label, child_label, components):
     if "_" in child_label:
         child_label_str = " ".join([t for t in child_label.split("_") if t not in stop_words]).strip()
         temp_features = compute_on_demand_feature(df, parent_label, child_label_str)
-    else:
+    elif child_label in components[parent_label]:
         temp_dic = components[parent_label][child_label]
         temp_features = [temp_dic["reldocfreq"], temp_dic["idf"], temp_dic["rel_freq"], temp_dic["similarity"]]
+    else:
+        temp_features = []
     return temp_features
 
 
@@ -143,33 +145,39 @@ def generate_negative_features(parent_label, parent_to_child, components, df):
     if p < 0.25:
         neg_child_label = random.choice(other_child_labels)
         temp_feature = get_feature(df, parent_label, neg_child_label, components)
-        features.append(temp_feature)
-        labels.append(0)
+        if len(temp_feature) > 0:
+            features.append(temp_feature)
+            labels.append(0)
     elif p < 0.5:
         neg_word = random.choice(vocab)
         temp_feature = get_feature(df, parent_label, neg_word, components)
-        features.append(temp_feature)
-        labels.append(0)
+        if len(temp_feature) > 0:
+            features.append(temp_feature)
+            labels.append(0)
     elif p < 0.75:
         neg_child_label = random.choice(other_child_labels)
         temp_feature = get_feature(df, parent_label, neg_child_label, components)
-        features.append(temp_feature)
-        labels.append(0)
+        if len(temp_feature) > 0:
+            features.append(temp_feature)
+            labels.append(0)
 
         neg_child_label = random.choice(other_child_labels)
         temp_feature = get_feature(df, parent_label, neg_child_label, components)
-        features.append(temp_feature)
-        labels.append(0)
+        if len(temp_feature) > 0:
+            features.append(temp_feature)
+            labels.append(0)
     else:
         neg_child_label = random.choice(other_child_labels)
         temp_feature = get_feature(df, parent_label, neg_child_label, components)
-        features.append(temp_feature)
-        labels.append(0)
+        if len(temp_feature) > 0:
+            features.append(temp_feature)
+            labels.append(0)
 
         neg_word = random.choice(vocab)
         temp_feature = get_feature(df, parent_label, neg_word, components)
-        features.append(temp_feature)
-        labels.append(0)
+        if len(temp_feature) > 0:
+            features.append(temp_feature)
+            labels.append(0)
     return features, labels
 
 
@@ -191,15 +199,17 @@ if __name__ == "__main__":
     inv_docfreq = calculate_inv_doc_freq(df, docfreq)
     label_docs_dict = get_label_docs_dict(df)
 
-    components = get_rank_matrix(docfreq, inv_docfreq, label_docs_dict, doc_freq_thresh=5)
+    # components = get_rank_matrix(docfreq, inv_docfreq, label_docs_dict, doc_freq_thresh=5)
+    components = pickle.load(open(data_path + "components.pkl", "rb"))
     features = []
     seed_labels = []
 
     for parent_label in parent_to_child:
         for child_label in parent_to_child[parent_label]:
             temp_feature = get_feature(df, parent_label, child_label, components)
-            features.append(temp_feature)
-            seed_labels.append(1)
+            if len(temp_feature) > 0:
+                features.append(temp_feature)
+                seed_labels.append(1)
 
     for parent_label in parent_to_child:
         temp_features, temp_labels = generate_negative_features(parent_label, parent_to_child, components, df)
