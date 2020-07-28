@@ -87,8 +87,8 @@ def compute_on_demand_feature(df, parent_label, child_label_str):
         label = row["label"]
         if child_label_str in sent:
             docfreq_all += 1
-        if label == parent_label:
-            docfreq_local += 1
+            if label == parent_label:
+                docfreq_local += 1
 
     count = 0
     for sent in temp_df.text:
@@ -114,7 +114,7 @@ def get_feature(df, parent_label, child_label, components):
         temp_dic = components[parent_label][child_label]
         temp_features = [temp_dic["reldocfreq"], temp_dic["idf"], temp_dic["rel_freq"], temp_dic["similarity"]]
     else:
-        temp_features = []
+        temp_features = compute_on_demand_feature(df, parent_label, child_label)
     return temp_features
 
 
@@ -122,62 +122,64 @@ def generate_negative_features(parent_label, parent_to_child, components, df):
     stop_words = set(stopwords.words('english'))
     stop_words.add('would')
     vect = CountVectorizer(tokenizer=lambda x: x.split(), stop_words=stop_words, min_df=5)
+
+    pos_df = df[df.label.isin([parent_label])]
+    X = vect.fit_transform(pos_df["text"])
+    in_vocab = vect.get_feature_names()
+    in_vocab = list(set(in_vocab) - set(parent_to_child[parent_label]))
+
     neg_df = df[~df.label.isin([parent_label])]
     X = vect.fit_transform(neg_df["text"])
-    vocab = vect.get_feature_names()
-
-    other_child_labels = []
-    for p in parent_to_child:
-        if p == parent_label:
-            continue
-        other_child_labels += parent_to_child[p]
-
-    # coin toss:
-    # if p < 0.25 one negative example from other_child_labels,
-    # if 0.25 < p < 0.5 one negative example from vocab,
-    # if 0.5 < p < 0.75 two negative examples from other_child_labels
-    # if 0.75 < p < 1 two negative examples, one from other_child_labels and one from vocab
-
-    p = random.uniform(0, 1)
+    out_vocab = vect.get_feature_names()
 
     features = []
     labels = []
-    if p < 0.25:
-        neg_child_label = random.choice(other_child_labels)
-        temp_feature = get_feature(df, parent_label, neg_child_label, components)
-        if len(temp_feature) > 0:
-            features.append(temp_feature)
-            labels.append(0)
-    elif p < 0.5:
-        neg_word = random.choice(vocab)
-        temp_feature = get_feature(df, parent_label, neg_word, components)
-        if len(temp_feature) > 0:
-            features.append(temp_feature)
-            labels.append(0)
-    elif p < 0.75:
-        neg_child_label = random.choice(other_child_labels)
-        temp_feature = get_feature(df, parent_label, neg_child_label, components)
-        if len(temp_feature) > 0:
-            features.append(temp_feature)
-            labels.append(0)
 
-        neg_child_label = random.choice(other_child_labels)
-        temp_feature = get_feature(df, parent_label, neg_child_label, components)
-        if len(temp_feature) > 0:
-            features.append(temp_feature)
-            labels.append(0)
-    else:
-        neg_child_label = random.choice(other_child_labels)
-        temp_feature = get_feature(df, parent_label, neg_child_label, components)
-        if len(temp_feature) > 0:
-            features.append(temp_feature)
-            labels.append(0)
+    for c in parent_to_child[parent_label]:
+        # coin toss:
+        # if p < 0.25 one negative example from in vocab,
+        # if 0.25 < p < 0.5 one negative example from out vocab,
+        # if 0.5 < p < 0.75 two negative examples from in vocab
+        # if 0.75 < p < 1 two negative examples, one from in vocab and one from out vocab
 
-        neg_word = random.choice(vocab)
-        temp_feature = get_feature(df, parent_label, neg_word, components)
-        if len(temp_feature) > 0:
-            features.append(temp_feature)
-            labels.append(0)
+        p = random.uniform(0, 1)
+
+        if p < 0.25:
+            neg_child_label = random.choice(in_vocab)
+            temp_feature = get_feature(df, parent_label, neg_child_label, components)
+            if len(temp_feature) > 0:
+                features.append(temp_feature)
+                labels.append(0)
+        elif p < 0.5:
+            neg_word = random.choice(out_vocab)
+            temp_feature = get_feature(df, parent_label, neg_word, components)
+            if len(temp_feature) > 0:
+                features.append(temp_feature)
+                labels.append(0)
+        elif p < 0.75:
+            neg_child_label = random.choice(in_vocab)
+            temp_feature = get_feature(df, parent_label, neg_child_label, components)
+            if len(temp_feature) > 0:
+                features.append(temp_feature)
+                labels.append(0)
+
+            neg_child_label = random.choice(in_vocab)
+            temp_feature = get_feature(df, parent_label, neg_child_label, components)
+            if len(temp_feature) > 0:
+                features.append(temp_feature)
+                labels.append(0)
+        else:
+            neg_child_label = random.choice(in_vocab)
+            temp_feature = get_feature(df, parent_label, neg_child_label, components)
+            if len(temp_feature) > 0:
+                features.append(temp_feature)
+                labels.append(0)
+
+            neg_word = random.choice(out_vocab)
+            temp_feature = get_feature(df, parent_label, neg_word, components)
+            if len(temp_feature) > 0:
+                features.append(temp_feature)
+                labels.append(0)
     return features, labels
 
 
