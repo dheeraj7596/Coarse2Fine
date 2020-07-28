@@ -1,10 +1,11 @@
 import pickle
 from gensim.models.poincare import PoincareModel
 from nltk.corpus import stopwords
+import string
 
 if __name__ == "__main__":
     # base_path = "/data4/dheeraj/coarse2fine/"
-    base_path = "./data/"
+    base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     dataset = "nyt"
     data_path = base_path + dataset + "/"
 
@@ -18,11 +19,14 @@ if __name__ == "__main__":
     for child in child_to_parent:
         relations.add((child, child_to_parent[child]))
 
+    translator = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
+
     for i, row in df.iterrows():
         label = row["label"]
         sent = row["text"]
-        words_list = sent.strip().split()
-        filtered_words = [word for word in words_list if word not in stop_words]
+        sent_nopuncts = sent.translate(translator)
+        words_list = sent_nopuncts.strip().split()
+        filtered_words = [word for word in words_list if word not in stop_words and len(word) != 1]
         child_labels = parent_to_child[label]
         for child_label in child_labels:
             temp_word = " ".join(child_label.split("_"))
