@@ -11,7 +11,7 @@ from sklearn.linear_model import LogisticRegression
 
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = 2
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 
 def get_embedding(word):
@@ -71,7 +71,8 @@ def get_rank_matrix(docfreq, inv_docfreq, label_docs_dict, doc_freq_thresh=5):
                 "reldocfreq": docfreq_local[name] / docfreq[name],
                 "idf": inv_docfreq[name],
                 "rel_freq": np.tanh(rel_freq[i]),
-                "similarity": cosine_similarity(get_embedding(l).detach().numpy(), get_embedding(name).detach().numpy())
+                "similarity": cosine_similarity(get_embedding(l).detach().cpu().numpy(),
+                                                get_embedding(name).detach().cpu().numpy())
             }
     return components
 
@@ -96,8 +97,8 @@ def compute_on_demand_feature(df, parent_label, child_label_str):
     reldocfreq = docfreq_local / docfreq_all
     idf = np.log(len(df) / docfreq_all)
     rel_freq = np.tanh(count / len(temp_df))
-    similarity = cosine_similarity(get_embedding(parent_label).detach().numpy(),
-                                   get_embedding(child_label_str).detach().numpy())
+    similarity = cosine_similarity(get_embedding(parent_label).detach().cpu().numpy(),
+                                   get_embedding(child_label_str).detach().cpu().numpy())
 
     return [reldocfreq, idf, rel_freq, similarity]
 
