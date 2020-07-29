@@ -11,17 +11,21 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 
 def get_embedding(word):
-    global bert_model, bert_tokenizer
-    word_ids = bert_tokenizer.encode(word)
-    word_ids = torch.LongTensor(word_ids)
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    bert_model = bert_model.to(device)
-    word_ids = word_ids.to(device)
-    bert_model.eval()
-    word_ids = word_ids.unsqueeze(0)
-    out = bert_model(input_ids=word_ids)
-    hidden_states = out[2]
-    sentence_embedding = torch.mean(hidden_states[-1], dim=1).squeeze()
+    global bert_model, bert_tokenizer, embeddings
+    try:
+        return embeddings[word]
+    except:
+        word_ids = bert_tokenizer.encode(word)
+        word_ids = torch.LongTensor(word_ids)
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        bert_model = bert_model.to(device)
+        word_ids = word_ids.to(device)
+        bert_model.eval()
+        word_ids = word_ids.unsqueeze(0)
+        out = bert_model(input_ids=word_ids)
+        hidden_states = out[2]
+        sentence_embedding = torch.mean(hidden_states[-1], dim=1).squeeze()
+        embeddings[word] = sentence_embedding
     return sentence_embedding
 
 
@@ -101,6 +105,7 @@ if __name__ == "__main__":
     df = preprocess_df(df)
 
     clf = pickle.load(open(data_path + "clf_logreg.pkl", "rb"))
+    embeddings = {}
 
     fine_seeds = {}
     for p in parent_to_child:
