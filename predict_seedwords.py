@@ -10,7 +10,8 @@ import os
 import json
 import nltk
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
+# os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 
 def get_embedding(word):
@@ -71,13 +72,15 @@ def get_seeds(df, parent_label, child_label, clf, sim=None):
 
     pos_df = df[df.label.isin([parent_label])]
     candidate_words = set()
-
+    is_noun = lambda pos: pos[:2] == 'NN'
     for sent in pos_df.text:
         if child_label_str in sent:
             words = sent.strip().split()
-            is_noun = lambda pos: pos[:2] == 'NN'
             nouns = set([word for (word, pos) in nltk.pos_tag(words) if is_noun(pos)])
-            candidate_words.update(nouns)
+            for n in nouns:
+                if len(n) <= 2:
+                    continue
+                candidate_words.add(n)
 
     candidate_words = candidate_words - {child_label_str}
 
@@ -143,8 +146,8 @@ def performance(pred_fine_seeds, actual_seeds, clf, parent_to_child, sim):
 
 
 if __name__ == "__main__":
-    base_path = "/data4/dheeraj/coarse2fine/"
-    # base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
+    # base_path = "/data4/dheeraj/coarse2fine/"
+    base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     dataset = "nyt"
     data_path = base_path + dataset + "/"
     topk = 20
