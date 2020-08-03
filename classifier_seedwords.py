@@ -1,5 +1,6 @@
 import pickle
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics import classification_report
 from nltk.corpus import stopwords
 import string
 import numpy as np
@@ -14,7 +15,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 
-def get_embedding(word):
+def get_bert_embedding(word):
     global bert_model, bert_tokenizer
     word_ids = bert_tokenizer.encode(word)
     word_ids = torch.LongTensor(word_ids)
@@ -71,13 +72,13 @@ def get_rank_matrix(docfreq, inv_docfreq, label_docs_dict, doc_freq_thresh=5):
                 "reldocfreq": docfreq_local[name] / docfreq[name],
                 "idf": inv_docfreq[name],
                 "rel_freq": np.tanh(rel_freq[i]),
-                "similarity": cosine_similarity(get_embedding(l).detach().cpu().numpy(),
-                                                get_embedding(name).detach().cpu().numpy())
+                "similarity": cosine_similarity(get_bert_embedding(l).detach().cpu().numpy(),
+                                                get_bert_embedding(name).detach().cpu().numpy())
             }
     return components
 
 
-def compute_on_demand_feature(df, parent_label, child_label_str):
+def compute_on_demand_feature(df, parent_label, child_label_str, sim=None):
     temp_df = df[df.label.isin([parent_label])]
 
     docfreq_all = 0
@@ -97,24 +98,30 @@ def compute_on_demand_feature(df, parent_label, child_label_str):
     reldocfreq = docfreq_local / docfreq_all
     idf = np.log(len(df) / docfreq_all)
     rel_freq = np.tanh(count / len(temp_df))
-    similarity = cosine_similarity(get_embedding(parent_label).detach().cpu().numpy(),
-                                   get_embedding(child_label_str).detach().cpu().numpy())
+    if sim is None:
+        return [reldocfreq, idf, rel_freq]
+    else:
+        similarity = cosine_similarity(get_bert_embedding(parent_label).detach().cpu().numpy(),
+                                       get_bert_embedding(child_label_str).detach().cpu().numpy())
 
-    return [reldocfreq, idf, rel_freq, similarity]
+        return [reldocfreq, idf, rel_freq, similarity]
 
 
-def get_feature(df, parent_label, child_label, components):
+def get_feature(df, parent_label, child_label, components, sim=None):
     stop_words = set(stopwords.words('english'))
     stop_words.add('would')
 
     if "_" in child_label:
         child_label_str = " ".join([t for t in child_label.split("_") if t not in stop_words]).strip()
-        temp_features = compute_on_demand_feature(df, parent_label, child_label_str)
+        temp_features = compute_on_demand_feature(df, parent_label, child_label_str, sim)
     elif child_label in components[parent_label]:
         temp_dic = components[parent_label][child_label]
-        temp_features = [temp_dic["reldocfreq"], temp_dic["idf"], temp_dic["rel_freq"], temp_dic["similarity"]]
+        if sim is None:
+            temp_features = [temp_dic["reldocfreq"], temp_dic["idf"], temp_dic["rel_freq"]]
+        else:
+            temp_features = [temp_dic["reldocfreq"], temp_dic["idf"], temp_dic["rel_freq"], temp_dic["similarity"]]
     else:
-        temp_features = compute_on_demand_feature(df, parent_label, child_label)
+        temp_features = compute_on_demand_feature(df, parent_label, child_label, sim)
     return temp_features
 
 
@@ -208,7 +215,7 @@ if __name__ == "__main__":
 
     for parent_label in parent_to_child:
         for child_label in parent_to_child[parent_label]:
-            temp_feature = get_feature(df, parent_label, child_label, components)
+            temp_feature = get_feature(df, parent_label, child_label, components, sim=None)
             if len(temp_feature) > 0:
                 features.append(temp_feature)
                 seed_labels.append(1)
@@ -225,4 +232,7 @@ if __name__ == "__main__":
     print(feature_vec)
     print(label_vec)
     clf = LogisticRegression().fit(feature_vec, label_vec)
-    pickle.dump(clf, open(data_path + "clf_logreg.pkl", "wb"))
+    preds = clf.predict(feature_vec)
+    print("Training Performance")
+    print(classification_report(seed_labels, preds))
+    pickle.dump(clf, open(data_path + "model_dumps/clf_logreg_nosim.pkl", "wb"))
