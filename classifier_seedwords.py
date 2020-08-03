@@ -12,6 +12,7 @@ from transformers import BertModel, BertTokenizer
 from sklearn.linear_model import LogisticRegression
 import nltk
 import os
+import sys
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
@@ -239,7 +240,10 @@ if __name__ == "__main__":
     dataset = "nyt"
     data_path = base_path + dataset + "/"
 
-    sim = "word2vec"
+    sim = sys.argv[1]
+    create_components = int(sys.argv[2])
+    if sim == "None":
+        sim = None
 
     if sim is not None and sim == "bert":
         bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
@@ -256,22 +260,23 @@ if __name__ == "__main__":
     inv_docfreq = calculate_inv_doc_freq(df, docfreq)
     label_docs_dict = get_label_docs_dict(df)
 
-    # components = get_rank_matrix(docfreq, inv_docfreq, label_docs_dict, doc_freq_thresh=5, sim=sim)
-    # if sim is None:
-    #     pickle.dump(components, open(data_path + "components_nosim.pkl", "wb"))
-    # elif sim == "bert":
-    #     pickle.dump(components, open(data_path + "components_bert.pkl", "wb"))
-    # elif sim == "word2vec":
-    #     pickle.dump(components, open(data_path + "components_word2vec.pkl", "wb"))
-
-    if sim is None:
-        components = pickle.load(open(data_path + "components_nosim.pkl", "rb"))
-    elif sim == "bert":
-        components = pickle.load(open(data_path + "components_bert.pkl", "rb"))
-    elif sim == "word2vec":
-        components = pickle.load(open(data_path + "components_word2vec.pkl", "rb"))
+    if create_components:
+        components = get_rank_matrix(docfreq, inv_docfreq, label_docs_dict, doc_freq_thresh=5, sim=sim)
+        if sim is None:
+            pickle.dump(components, open(data_path + "components_nosim.pkl", "wb"))
+        elif sim == "bert":
+            pickle.dump(components, open(data_path + "components_bert.pkl", "wb"))
+        elif sim == "word2vec":
+            pickle.dump(components, open(data_path + "components_word2vec.pkl", "wb"))
     else:
-        raise ValueError("sim can be only in None, bert, word2vec")
+        if sim is None:
+            components = pickle.load(open(data_path + "components_nosim.pkl", "rb"))
+        elif sim == "bert":
+            components = pickle.load(open(data_path + "components_bert.pkl", "rb"))
+        elif sim == "word2vec":
+            components = pickle.load(open(data_path + "components_word2vec.pkl", "rb"))
+        else:
+            raise ValueError("sim can be only in None, bert, word2vec")
     features = []
     seed_labels = []
 

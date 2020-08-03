@@ -2,6 +2,7 @@ import pickle
 from nltk.corpus import stopwords
 from util import *
 from transformers import BertModel, BertTokenizer
+from gensim.models import word2vec
 from sklearn.metrics import accuracy_score
 from classifier_seedwords import preprocess_df
 import torch
@@ -9,31 +10,61 @@ import pandas as pd
 import os
 import json
 import nltk
+import sys
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = "2"
-
-
-def get_embedding(word):
+def get_bert_embeddings(words):
     global bert_model, bert_tokenizer, embeddings
-    try:
-        return embeddings[word]
-    except:
-        word_ids = bert_tokenizer.encode(word)
-        word_ids = torch.LongTensor(word_ids)
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        bert_model = bert_model.to(device)
-        word_ids = word_ids.to(device)
-        bert_model.eval()
-        word_ids = word_ids.unsqueeze(0)
-        out = bert_model(input_ids=word_ids)
-        hidden_states = out[2]
-        sentence_embedding = torch.mean(hidden_states[-1], dim=1).squeeze()
-        embeddings[word] = sentence_embedding
-    return sentence_embedding
+    unknown_words = []
+    for word in words:
+        try:
+            temp = embeddings[word]
+        except:
+            unknown_words.append(word)
+
+    batch_word_ids = bert_tokenizer(unknown_words, padding=True, truncation=True, return_tensors="pt")
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    batch_word_ids = batch_word_ids.to(device)
+    out = bert_model(**batch_word_ids)
+    hidden_states = out[2]
+    sentence_embeddings = torch.mean(hidden_states[-1], dim=1)
+    for i, word in enumerate(unknown_words):
+        embeddings[word] = sentence_embeddings[i, :].detach().cpu().numpy()
+
+
+def get_word_embeddings(words):
+    global embeddings, embedding_model
+    unknown_words = []
+    for word in words:
+        try:
+            temp = embeddings[word]
+        except:
+            unknown_words.append(word)
+
+    for word in unknown_words:
+        temp = word.split()
+        vec = np.zeros(embedding_model.vector_size)
+        for w in temp:
+            try:
+                vec += embedding_model[w]
+            except:
+                print("Unable to find embedding for ", w)
+                vec += np.random.uniform(-0.25, 0.25, embedding_model.vector_size)
+        vec = vec / len(temp)
+        embeddings[word] = vec
+
+
+def get_embeddings(words, sim="bert"):
+    if sim == "bert":
+        get_bert_embeddings(words)
+    else:
+        get_word_embeddings(words)
 
 
 def compute_on_demand_fine_feature(df, parent_label, child_label_str, candidate_word, sim=None):
+    global embeddings
     candidate_word_in_df = df[df['text'].str.contains(candidate_word)]
     parent_label_df = df[df["label"] == parent_label]
     child_label_str_in_parentdf = parent_label_df[parent_label_df['text'].str.contains(child_label_str)]
@@ -60,8 +91,7 @@ def compute_on_demand_fine_feature(df, parent_label, child_label_str, candidate_
     if sim is None:
         return [reldocfreq, idf, rel_freq]
     else:
-        similarity = cosine_similarity(get_embedding(candidate_word).detach().cpu().numpy(),
-                                       get_embedding(child_label_str).detach().cpu().numpy())
+        similarity = cosine_similarity(embeddings[candidate_word], embeddings[child_label_str])
         return [reldocfreq, idf, rel_freq, similarity]
 
 
@@ -83,6 +113,10 @@ def get_seeds(df, parent_label, child_label, clf, sim=None):
                 candidate_words.add(n)
 
     candidate_words = candidate_words - {child_label_str}
+    if sim is not None:
+        temp = candidate_words.copy()
+        temp.add(child_label_str)
+        get_embeddings(temp, sim)
 
     candidate_words = list(candidate_words)
     print("Number of candidate words: ", len(candidate_words), "for child label: ", child_label, "for parent label: ",
@@ -132,6 +166,7 @@ def performance(pred_fine_seeds, actual_seeds, clf, parent_to_child, sim):
     print("Precision at 10: ", mean_prec_k[10])
     print("Precision at 20: ", mean_prec_k[20])
 
+    get_embeddings(list(actual_seeds.values()), sim)
     features = []
     for parent in parent_to_child:
         for child in parent_to_child[parent]:
@@ -151,10 +186,20 @@ if __name__ == "__main__":
     dataset = "nyt"
     data_path = base_path + dataset + "/"
     topk = 20
-    sim = None
 
-    # bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-    # bert_model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
+    sim = sys.argv[1]
+    create_components = int(sys.argv[2])
+    if sim == "None":
+        sim = None
+
+    if sim is not None and sim == "bert":
+        bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        bert_model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        bert_model = bert_model.to(device)
+        bert_model.eval()
+    elif sim is not None and sim == "word2vec":
+        embedding_model = word2vec.Word2Vec.load(data_path + "word2vec.model")
 
     df = pickle.load(open(data_path + "df_coarse.pkl", "rb"))
     child_to_parent = pickle.load(open(data_path + "child_to_parent.pkl", "rb"))
@@ -163,7 +208,15 @@ if __name__ == "__main__":
 
     actual_seeds = json.load(open(data_path + "actual_seedwords.json", "rb"))
 
-    clf = pickle.load(open(data_path + "model_dumps/clf_logreg_nosim.pkl", "rb"))
+    if sim is None:
+        clf = pickle.load(open(data_path + "model_dumps/clf_logreg_nosim.pkl", "rb"))
+    elif sim == "bert":
+        clf = pickle.load(open(data_path + "model_dumps/clf_logreg_bert.pkl", "rb"))
+    elif sim == "word2vec":
+        clf = pickle.load(open(data_path + "model_dumps/clf_logreg_word2vec.pkl", "rb"))
+    else:
+        raise ValueError("sim can be only in None, bert, word2vec")
+
     embeddings = {}
 
     fine_seeds = {}
