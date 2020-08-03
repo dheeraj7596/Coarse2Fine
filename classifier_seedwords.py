@@ -191,8 +191,8 @@ def generate_negative_features(parent_label, parent_to_child, components, df):
 
 
 if __name__ == "__main__":
-    # base_path = "/data4/dheeraj/coarse2fine/"
-    base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
+    base_path = "/data4/dheeraj/coarse2fine/"
+    # base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     dataset = "nyt"
     data_path = base_path + dataset + "/"
 

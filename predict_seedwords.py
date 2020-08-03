@@ -166,8 +166,7 @@ if __name__ == "__main__":
         for c in parent_to_child[p]:
             print("Child Label: ", c)
             print("#" * 40)
-            fine_seeds[c] = actual_seeds[c]
-            # fine_seeds[c] = get_seeds(df, p, c, clf, sim)
+            fine_seeds[c] = get_seeds(df, p, c, clf, sim)
             for s in fine_seeds[c][:topk]:
                 print(s)
             print("*" * 80)
