@@ -146,8 +146,8 @@ def performance(pred_fine_seeds, actual_seeds, clf, parent_to_child, sim):
 
 
 if __name__ == "__main__":
-    # base_path = "/data4/dheeraj/coarse2fine/"
-    base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
+    base_path = "/data4/dheeraj/coarse2fine/"
+    # base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     dataset = "nyt"
     data_path = base_path + dataset + "/"
     topk = 20
