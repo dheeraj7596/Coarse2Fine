@@ -239,7 +239,7 @@ if __name__ == "__main__":
     dataset = "nyt"
     data_path = base_path + dataset + "/"
 
-    sim = None
+    sim = "word2vec"
 
     if sim is not None and sim == "bert":
         bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
@@ -258,7 +258,7 @@ if __name__ == "__main__":
 
     components = get_rank_matrix(docfreq, inv_docfreq, label_docs_dict, doc_freq_thresh=5, sim=sim)
     if sim is None:
-        pickle.dump(components, open(data_path + "model_dumps/components.pkl", "wb"))
+        pickle.dump(components, open(data_path + "model_dumps/components_nosim.pkl", "wb"))
     elif sim == "bert":
         pickle.dump(components, open(data_path + "model_dumps/components_bert.pkl", "wb"))
     elif sim == "word2vec":
