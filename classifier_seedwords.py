@@ -138,7 +138,7 @@ def compute_on_demand_feature(df, parent_label, child_label_str, sim=None):
         return [reldocfreq, idf, rel_freq, similarity]
 
 
-def get_feature(df, parent_label, child_label, components, sim=None):
+def get_feature(df, parent_label, child_label, components, sim):
     stop_words = set(stopwords.words('english'))
     stop_words.add('would')
 
@@ -156,7 +156,7 @@ def get_feature(df, parent_label, child_label, components, sim=None):
     return temp_features
 
 
-def generate_negative_features(parent_label, parent_to_child, components, df):
+def generate_negative_features(parent_label, parent_to_child, components, df, sim):
     stop_words = set(stopwords.words('english'))
     stop_words.add('would')
     is_noun = lambda pos: pos[:2] == 'NN'
@@ -196,37 +196,37 @@ def generate_negative_features(parent_label, parent_to_child, components, df):
         p = random.uniform(0, 1)
         if p < 0.25:
             neg_child_label = random.choice(in_vocab)
-            temp_feature = get_feature(df, parent_label, neg_child_label, components)
+            temp_feature = get_feature(df, parent_label, neg_child_label, components, sim)
             if len(temp_feature) > 0:
                 features.append(temp_feature)
                 labels.append(0)
         elif p < 0.5:
             neg_word = random.choice(out_vocab)
-            temp_feature = get_feature(df, parent_label, neg_word, components)
+            temp_feature = get_feature(df, parent_label, neg_word, components, sim)
             if len(temp_feature) > 0:
                 features.append(temp_feature)
                 labels.append(0)
         elif p < 0.75:
             neg_child_label = random.choice(in_vocab)
-            temp_feature = get_feature(df, parent_label, neg_child_label, components)
+            temp_feature = get_feature(df, parent_label, neg_child_label, components, sim)
             if len(temp_feature) > 0:
                 features.append(temp_feature)
                 labels.append(0)
 
             neg_child_label = random.choice(in_vocab)
-            temp_feature = get_feature(df, parent_label, neg_child_label, components)
+            temp_feature = get_feature(df, parent_label, neg_child_label, components, sim)
             if len(temp_feature) > 0:
                 features.append(temp_feature)
                 labels.append(0)
         else:
             neg_child_label = random.choice(in_vocab)
-            temp_feature = get_feature(df, parent_label, neg_child_label, components)
+            temp_feature = get_feature(df, parent_label, neg_child_label, components, sim)
             if len(temp_feature) > 0:
                 features.append(temp_feature)
                 labels.append(0)
 
             neg_word = random.choice(out_vocab)
-            temp_feature = get_feature(df, parent_label, neg_word, components)
+            temp_feature = get_feature(df, parent_label, neg_word, components, sim)
             if len(temp_feature) > 0:
                 features.append(temp_feature)
                 labels.append(0)
@@ -256,14 +256,22 @@ if __name__ == "__main__":
     inv_docfreq = calculate_inv_doc_freq(df, docfreq)
     label_docs_dict = get_label_docs_dict(df)
 
-    components = get_rank_matrix(docfreq, inv_docfreq, label_docs_dict, doc_freq_thresh=5, sim=sim)
+    # components = get_rank_matrix(docfreq, inv_docfreq, label_docs_dict, doc_freq_thresh=5, sim=sim)
+    # if sim is None:
+    #     pickle.dump(components, open(data_path + "components_nosim.pkl", "wb"))
+    # elif sim == "bert":
+    #     pickle.dump(components, open(data_path + "components_bert.pkl", "wb"))
+    # elif sim == "word2vec":
+    #     pickle.dump(components, open(data_path + "components_word2vec.pkl", "wb"))
+
     if sim is None:
-        pickle.dump(components, open(data_path + "model_dumps/components_nosim.pkl", "wb"))
+        components = pickle.load(open(data_path + "components_nosim.pkl", "rb"))
     elif sim == "bert":
-        pickle.dump(components, open(data_path + "model_dumps/components_bert.pkl", "wb"))
+        components = pickle.load(open(data_path + "components_bert.pkl", "rb"))
     elif sim == "word2vec":
-        pickle.dump(components, open(data_path + "model_dumps/components_word2vec.pkl", "wb"))
-    # components = pickle.load(open(data_path + "components.pkl", "rb"))
+        components = pickle.load(open(data_path + "components_word2vec.pkl", "rb"))
+    else:
+        raise ValueError("sim can be only in None, bert, word2vec")
     features = []
     seed_labels = []
 
@@ -275,7 +283,7 @@ if __name__ == "__main__":
                 seed_labels.append(1)
 
     for parent_label in parent_to_child:
-        temp_features, temp_labels = generate_negative_features(parent_label, parent_to_child, components, df)
+        temp_features, temp_labels = generate_negative_features(parent_label, parent_to_child, components, df, sim)
         features += temp_features
         seed_labels += temp_labels
 
