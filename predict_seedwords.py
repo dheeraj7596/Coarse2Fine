@@ -8,6 +8,7 @@ import torch
 import pandas as pd
 import os
 import json
+import nltk
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
@@ -73,7 +74,10 @@ def get_seeds(df, parent_label, child_label, clf, sim=None):
 
     for sent in pos_df.text:
         if child_label_str in sent:
-            candidate_words.update(set(sent.split()))
+            words = sent.strip().split()
+            is_noun = lambda pos: pos[:2] == 'NN'
+            nouns = set([word for (word, pos) in nltk.pos_tag(words) if is_noun(pos)])
+            candidate_words.update(nouns)
 
     candidate_words = candidate_words - {child_label_str}
 
