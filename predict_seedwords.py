@@ -188,7 +188,6 @@ if __name__ == "__main__":
     topk = 20
 
     sim = sys.argv[1]
-    create_components = int(sys.argv[2])
     if sim == "None":
         sim = None
 
