@@ -166,7 +166,8 @@ def performance(pred_fine_seeds, actual_seeds, clf, parent_to_child, sim):
     print("Precision at 10: ", mean_prec_k[10])
     print("Precision at 20: ", mean_prec_k[20])
 
-    get_embeddings(list(actual_seeds.values()), sim)
+    actual_seeds_list = [item for sublist in list(actual_seeds.values()) for item in sublist]
+    get_embeddings(actual_seeds_list, sim)
     features = []
     for parent in parent_to_child:
         for child in parent_to_child[parent]:
