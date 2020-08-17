@@ -101,12 +101,12 @@ def create_data_loaders(dataset):
     return train_dataloader, validation_dataloader
 
 
-def train(train_dataloader, validation_dataloader, device):
+def train(train_dataloader, validation_dataloader, device, num_labels):
     # Load BertForSequenceClassification, the pretrained BERT model with a single
     # linear classification layer on top.
     model = BertForSequenceClassification.from_pretrained(
         "bert-base-uncased",  # Use the 12-layer BERT model, with an uncased vocab.
-        num_labels=2,  # The number of output labels--2 for binary classification.
+        num_labels=num_labels,  # The number of output labels--2 for binary classification.
         # You can increase this for multi-class tasks.
         output_attentions=False,  # Whether the model returns attentions weights.
         output_hidden_states=False,  # Whether the model returns all hidden-states.
@@ -439,6 +439,6 @@ if __name__ == "__main__":
     else:
         device = torch.device("cpu")
 
-    model = train(train_dataloader, validation_dataloader, device)
+    model = train(train_dataloader, validation_dataloader, device, num_labels=len(label_to_index))
     tokenizer.save_pretrained(tok_path)
     model.save_pretrained(model_path)
