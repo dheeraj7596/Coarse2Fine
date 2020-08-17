@@ -42,7 +42,7 @@ def bert_tokenize(tokenizer, df, label_to_index):
     labels = df.label.values
     for i, l in enumerate(list(labels)):
         labels[i] = label_to_index[l]
-
+    labels = np.array(labels, dtype='int32')
     for sent in sentences:
         # `encode_plus` will:
         #   (1) Tokenize the sentence.
