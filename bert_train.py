@@ -34,12 +34,15 @@ def flat_accuracy(preds, labels):
     return np.sum(pred_flat == labels_flat) / len(labels_flat)
 
 
-def bert_tokenize(tokenizer, df):
+def bert_tokenize(tokenizer, df, label_to_index):
     input_ids = []
     attention_masks = []
     # For every sentence...
     sentences = df.text.values
     labels = df.label.values
+    for i, l in enumerate(list(labels)):
+        labels[i] = label_to_index[l]
+
     for sent in sentences:
         # `encode_plus` will:
         #   (1) Tokenize the sentence.
@@ -378,8 +381,8 @@ def evaluate(model, prediction_dataloader, device):
     return predictions, true_labels
 
 
-def test(df_test_original):
-    input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_test_original)
+def test(df_test_original, label_to_index):
+    input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_test_original, label_to_index)
     # Set the batch size.
     batch_size = 32
     # Create the DataLoader.
@@ -417,7 +420,12 @@ if __name__ == "__main__":
     print('Loading BERT tokenizer...')
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
-    input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_train)
+    label_set = set(df_train.label.values)
+    label_to_index = {}
+    for i, l in enumerate(list(label_set)):
+        label_to_index[l] = i
+
+    input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_train, label_to_index)
 
     # Combine the training inputs into a TensorDataset.
     dataset = TensorDataset(input_ids, attention_masks, labels)
