@@ -68,7 +68,7 @@ def bert_tokenize(tokenizer, df, label_to_index):
     # Convert the lists into tensors.
     input_ids = torch.cat(input_ids, dim=0)
     attention_masks = torch.cat(attention_masks, dim=0)
-    labels = torch.tensor(labels)
+    labels = torch.LongTensor(labels)
     # Print sentence 0, now as a list of IDs.
     print('Original: ', sentences[0])
     print('Token IDs:', input_ids[0])
