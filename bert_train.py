@@ -13,6 +13,8 @@ import datetime
 import os
 from sklearn.metrics import classification_report
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+
 
 def format_time(elapsed):
     '''
