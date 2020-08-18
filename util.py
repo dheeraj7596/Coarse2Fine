@@ -52,3 +52,11 @@ def get_label_docs_dict(df):
         except:
             label_docs_dict[label] = [line]
     return label_docs_dict
+
+
+def print_seed_dict(label_seed_dict):
+    for label in label_seed_dict:
+        print(label)
+        print("*" * 80)
+        for val in label_seed_dict[label]:
+            print(val)
