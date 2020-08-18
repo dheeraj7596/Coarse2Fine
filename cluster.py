@@ -8,7 +8,7 @@ from scipy.special import softmax
 import numpy as np
 from util import print_seed_dict
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 
 
 def get_bert_embeddings(model, tokenizer, words):
@@ -55,6 +55,8 @@ if __name__ == "__main__":
 
     tokenizer = BertTokenizer.from_pretrained(tok_path)
     model = BertForSequenceClassification.from_pretrained(model_path)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = model.to(device)
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
 
     child_seeds_dict = {}
