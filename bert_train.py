@@ -109,7 +109,7 @@ def train(train_dataloader, validation_dataloader, device, num_labels):
         num_labels=num_labels,  # The number of output labels--2 for binary classification.
         # You can increase this for multi-class tasks.
         output_attentions=False,  # Whether the model returns attentions weights.
-        output_hidden_states=False,  # Whether the model returns all hidden-states.
+        output_hidden_states=True,  # Whether the model returns all hidden-states.
     )
     if device == torch.device("cuda"):
         model.cuda()
