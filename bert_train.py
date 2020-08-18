@@ -214,10 +214,10 @@ def train(train_dataloader, validation_dataloader, device, num_labels):
             # arge given and what flags are set. For our useage here, it returns
             # the loss (because we provided labels) and the "logits"--the model
             # outputs prior to activation.
-            loss, logits = model(b_input_ids,
-                                 token_type_ids=None,
-                                 attention_mask=b_input_mask,
-                                 labels=b_labels)
+            loss, logits, hidden_states = model(b_input_ids,
+                                                token_type_ids=None,
+                                                attention_mask=b_input_mask,
+                                                labels=b_labels)
 
             # Accumulate the training loss over all of the batches so that we can
             # calculate the average loss at the end. `loss` is a Tensor containing a
@@ -295,10 +295,10 @@ def train(train_dataloader, validation_dataloader, device, num_labels):
                 # https://huggingface.co/transformers/v2.2.0/model_doc/bert.html#transformers.BertForSequenceClassification
                 # Get the "logits" output by the model. The "logits" are the output
                 # values prior to applying an activation function like the softmax.
-                (loss, logits) = model(b_input_ids,
-                                       token_type_ids=None,
-                                       attention_mask=b_input_mask,
-                                       labels=b_labels)
+                (loss, logits, hidden_states) = model(b_input_ids,
+                                                      token_type_ids=None,
+                                                      attention_mask=b_input_mask,
+                                                      labels=b_labels)
 
             # Accumulate the validation loss.
             total_eval_loss += loss.item()
