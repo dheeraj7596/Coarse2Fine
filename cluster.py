@@ -7,6 +7,7 @@ from util import cosine_similarity
 from scipy.special import softmax
 import numpy as np
 from util import print_seed_dict
+import sys
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 
@@ -51,6 +52,8 @@ if __name__ == "__main__":
 
     tok_path = pkl_dump_dir + "bert/tokenizer"
     model_path = pkl_dump_dir + "bert/model"
+
+    thresh = float(sys.argv[1])
     seed_phrases = json.load(open(pkl_dump_dir + "conwea_top100phrases.json", "r"))
 
     tokenizer = BertTokenizer.from_pretrained(tok_path)
@@ -62,7 +65,7 @@ if __name__ == "__main__":
     child_seeds_dict = {}
     for p in parent_to_child:
         child_labels = parent_to_child[p]
-        fine_seeds_dict = get_fine_seeds(child_labels, list(seed_phrases[p].keys()), model, tokenizer)
+        fine_seeds_dict = get_fine_seeds(child_labels, list(seed_phrases[p].keys()), model, tokenizer, thresh=thresh)
         for c in child_labels:
             child_seeds_dict[c] = fine_seeds_dict[c]
 
