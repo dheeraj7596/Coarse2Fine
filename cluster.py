@@ -1,5 +1,5 @@
 import json
-from transformers import BertForSequenceClassification, BertTokenizer
+from transformers import BertForSequenceClassification, BertTokenizer, BertModel
 import pickle
 import os
 import torch
@@ -18,7 +18,8 @@ def get_bert_embeddings(model, tokenizer, words):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     batch_word_ids = batch_word_ids.to(device)
     out = model(**batch_word_ids)
-    hidden_states = out[1]
+    # hidden_states = out[1]
+    hidden_states = out[2]
     sentence_embeddings = torch.mean(hidden_states[-1], dim=1)
     for i, word in enumerate(words):
         embeddings[word] = sentence_embeddings[i, :].detach().cpu().numpy()
@@ -56,10 +57,15 @@ if __name__ == "__main__":
     thresh = float(sys.argv[1])
     seed_phrases = json.load(open(pkl_dump_dir + "conwea_top100phrases.json", "r"))
 
-    tokenizer = BertTokenizer.from_pretrained(tok_path)
-    model = BertForSequenceClassification.from_pretrained(model_path)
+    # tokenizer = BertTokenizer.from_pretrained(tok_path)
+    # model = BertForSequenceClassification.from_pretrained(model_path)
+
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = model.to(device)
+    model.eval()
+
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
 
     child_seeds_dict = {}
