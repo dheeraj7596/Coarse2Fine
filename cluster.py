@@ -17,7 +17,7 @@ def get_bert_embeddings(model, tokenizer, words):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     batch_word_ids = batch_word_ids.to(device)
     out = model(**batch_word_ids)
-    hidden_states = out[2]
+    hidden_states = out[1]
     sentence_embeddings = torch.mean(hidden_states[-1], dim=1)
     for i, word in enumerate(words):
         embeddings[word] = sentence_embeddings[i, :].detach().cpu().numpy()
