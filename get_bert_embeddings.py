@@ -6,7 +6,7 @@ import torch
 from classifier_seedwords import preprocess_df
 import numpy as np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 
 def get_bert_embeddings(model, tokenizer, sentences):
@@ -65,5 +65,5 @@ if __name__ == "__main__":
 
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
 
-    embeddings = get_bert_embeddings(model, tokenizer, list(df.text)[:2])
+    embeddings = get_bert_embeddings(model, tokenizer, list(df.text))
     pickle.dump(embeddings, open(pkl_dump_dir + "bert_word_embeddings.pkl", "wb"))
