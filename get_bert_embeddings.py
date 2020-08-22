@@ -9,11 +9,8 @@ import numpy as np
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 
-def get_bert_embeddings(model, tokenizer, sentences):
+def get_bert_embeddings(embeddings, count, model, tokenizer, sentences):
     # concatenate last 4 layers for the word embedding
-
-    embeddings = {}
-    count = {}
     batch_word_ids = tokenizer(sentences, padding=True, truncation=True, return_tensors="pt")
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     batch_word_ids = batch_word_ids.to(device)
@@ -22,8 +19,6 @@ def get_bert_embeddings(model, tokenizer, sentences):
     batch_embeddings = torch.stack(hidden_states, dim=0)  # (13 x batch_size x num_tokens x dim)
     batch_embeddings = batch_embeddings.permute(1, 2, 0, 3)  # (batch_size x num_tokens x 13 x dim)
     for i, sent in enumerate(sentences):
-        if i % 100 == 0:
-            print("Finished sentences: ", i)
         sentence_embedding = batch_embeddings[i, :, :, :]  # (num_tokens x 13 x dim)
         total_tokens = sentence_embedding.shape[0]
         words = sent.strip().split()
@@ -45,10 +40,16 @@ def get_bert_embeddings(model, tokenizer, sentences):
 
     for word in embeddings:
         embeddings[word] = embeddings[word] / count[word]
-    return embeddings
+    return embeddings, count
 
 
 if __name__ == "__main__":
+    def chunks(lst, n):
+        """Yield successive n-sized chunks from lst."""
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
+
+
     # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     basepath = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt/"
@@ -64,6 +65,12 @@ if __name__ == "__main__":
     model.eval()
 
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
+    embeddings = {}
+    count = {}
 
-    embeddings = get_bert_embeddings(model, tokenizer, list(df.text))
+    i = 0
+    for batch in chunks(list(df.text), n=100):
+        print("Batch: ", i)
+        embeddings, count = get_bert_embeddings(embeddings, count, model, tokenizer, batch)
+        i += 1
     pickle.dump(embeddings, open(pkl_dump_dir + "bert_word_embeddings.pkl", "wb"))
