@@ -29,6 +29,7 @@ if __name__ == "__main__":
                 all_sims[ch][w] = sim
                 mean_sim[ch] += sim
             mean_sim[ch] = mean_sim[ch] / len(embeddings)
+            all_sims[ch] = {k: v for k, v in sorted(all_sims[ch].items(), key=lambda item: -item[1])[:1000]}
 
     print(mean_sim)
     json.dump(all_sims, open(pkl_dump_dir + "all_sims.json", "w"))
