@@ -69,7 +69,7 @@ if __name__ == "__main__":
     count = {}
 
     i = 0
-    for batch in chunks(list(df.text), n=100):
+    for batch in chunks(list(df.text), n=50):
         print("Batch: ", i)
         embeddings, count = get_bert_embeddings(embeddings, count, model, tokenizer, batch)
         i += 1
