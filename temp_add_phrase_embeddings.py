@@ -36,18 +36,18 @@ def get_phrase_embedding(ph, embeddings, translator):
 
 def bert_embedding(model, tokenizer, phrase):
     # concatenate last 4 layers for the word embedding
-    batch_word_ids = tokenizer(phrase, padding=True, truncation=True, return_tensors="pt")
+    layer = 12
+    word_ids = tokenizer.encode(phrase)
+    word_ids = torch.LongTensor(word_ids)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    batch_word_ids = batch_word_ids.to(device)
-    out = model(**batch_word_ids)
-    hidden_states = out[2]  # tuple of size num_attn heads = 13, each containing batch_size x num_tokens x dim
-    batch_embeddings = torch.stack(hidden_states, dim=0)  # (13 x batch_size x num_tokens x dim)
-    batch_embeddings = batch_embeddings.permute(1, 2, 0, 3)  # (batch_size x num_tokens x 13 x dim)
-    sentence_embedding = batch_embeddings.squeeze(0)
-    word_embeddings = sentence_embedding[:, -4:, :]  # (num_tokens x 4 x dim)
-    word_embeddings = word_embeddings.contiguous().view(word_embeddings.shape[0], -1)
-    word_embeddings = torch.mean(word_embeddings, dim=0)
-    return word_embeddings.contiguous().detach().cpu().numpy()
+    bert_model = model.to(device)
+    word_ids = word_ids.to(device)
+    bert_model.eval()
+    word_ids = word_ids.unsqueeze(0)
+    out = bert_model(input_ids=word_ids)
+    hidden_states = out[2]
+    sentence_embedding = torch.mean(hidden_states[layer], dim=1).squeeze()
+    return sentence_embedding.contiguous().detach().cpu().numpy()
 
 
 if __name__ == "__main__":
