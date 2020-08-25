@@ -115,4 +115,8 @@ if __name__ == "__main__":
         print("Batch: ", i)
         embeddings, count = get_zihan_bert_embeddings(embeddings, count, model, tokenizer, batch)
         i += 1
+
+    for w in embeddings:
+        embeddings[w] = embeddings[w] / count[w]
+
     pickle.dump(embeddings, open(pkl_dump_dir + "bert_word_embeddings.pkl", "wb"))

@@ -112,4 +112,10 @@ if __name__ == "__main__":
     count = {}
     embeddings, count = get_phrase_bert_embeddings(embeddings, count, model, tokenizer, filtered_phrases, list(df.text))
 
+    for w in embeddings:
+        try:
+            embeddings[w] = embeddings[w] / count[w]
+        except:
+            continue
+
     pickle.dump(embeddings, open(pkl_dump_dir + "bert_word_phrase_embeddings.pkl", "wb"))
