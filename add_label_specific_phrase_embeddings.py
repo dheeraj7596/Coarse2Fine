@@ -98,27 +98,36 @@ if __name__ == "__main__":
 
     phrase_id = pickle.load(open(pkl_dump_dir + "phrase_id_coarse_map.pkl", "rb"))
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
-    embeddings = pickle.load(open(pkl_dump_dir + "bert_word_embeddings.pkl", "rb"))
+    label_embeddings = pickle.load(open(pkl_dump_dir + "label_bert_word_embeddings.pkl", "rb"))
 
     phrases = list(phrase_id.keys())
-    filtered_phrases = list(set(phrases) - set(embeddings.keys()))
 
     for p in parent_to_child:
-        for ch in parent_to_child[p]:
-            child_label_str = " ".join([t for t in ch.split("_") if t not in stop_words]).strip()
-            if child_label_str not in embeddings:
-                filtered_phrases.append(child_label_str)
+        embeddings = label_embeddings[p]
+        temp_df = df[df.label.isin([p])]
+        temp_df = temp_df.reset_index(drop=True)
 
-    filtered_phrases = [ph.translate(translator) for ph in filtered_phrases]
-    print("Number of Unknown phrases: ", len(filtered_phrases))
+        filtered_phrases = list(set(phrases) - set(embeddings.keys()))
 
-    count = {}
-    embeddings, count = get_phrase_bert_embeddings(embeddings, count, model, tokenizer, filtered_phrases, list(df.text))
+        for p in parent_to_child:
+            for ch in parent_to_child[p]:
+                child_label_str = " ".join([t for t in ch.split("_") if t not in stop_words]).strip()
+                if child_label_str not in embeddings:
+                    filtered_phrases.append(child_label_str)
 
-    for w in embeddings:
-        try:
-            embeddings[w] = embeddings[w] / count[w]
-        except:
-            continue
+        filtered_phrases = [ph.translate(translator) for ph in filtered_phrases]
+        print("Number of Unknown phrases: ", len(filtered_phrases))
 
-    pickle.dump(embeddings, open(pkl_dump_dir + "bert_word_phrase_embeddings.pkl", "wb"))
+        count = {}
+        embeddings, count = get_phrase_bert_embeddings(embeddings, count, model, tokenizer, filtered_phrases,
+                                                       list(temp_df.text))
+
+        for w in embeddings:
+            try:
+                embeddings[w] = embeddings[w] / count[w]
+            except:
+                continue
+
+        label_embeddings[p] = embeddings
+
+    pickle.dump(label_embeddings, open(pkl_dump_dir + "label_bert_word_phrase_embeddings.pkl", "wb"))
