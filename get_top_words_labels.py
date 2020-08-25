@@ -33,3 +33,4 @@ if __name__ == "__main__":
 
     print(mean_sim)
     json.dump(all_sims, open(pkl_dump_dir + "all_sims.json", "w"))
+    json.dump(mean_sim, open(pkl_dump_dir + "mean_sim.json", "w"))
