@@ -25,9 +25,8 @@ if __name__ == "__main__":
         for ch in parent_to_child[p]:
             all_sims[ch] = {}
             mean_sim[ch] = 0
-            child_label_str = " ".join([t for t in ch.split("_") if t not in stop_words]).strip()
             for w in embeddings:
-                sim = cosine_similarity(label_embeddings[child_label_str], embeddings[w])
+                sim = cosine_similarity(label_embeddings[ch], embeddings[w])
                 all_sims[ch][w] = sim
                 mean_sim[ch] += sim
             mean_sim[ch] = mean_sim[ch] / len(embeddings)
