@@ -20,7 +20,8 @@ if __name__ == "__main__":
     translator = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
 
     for p in parent_to_child:
-        for ch in parent_to_child[p]:
+        parent_plus_child = parent_to_child[p] + [p]
+        for ch in parent_plus_child:
             all_sims[ch] = {}
             mean_sim[ch] = 0
             child_label_str = " ".join([t for t in ch.split("_") if t not in stop_words]).strip()
@@ -32,5 +33,5 @@ if __name__ == "__main__":
             all_sims[ch] = {k: v for k, v in sorted(all_sims[ch].items(), key=lambda item: -item[1])[:1000]}
 
     print(mean_sim)
-    json.dump(all_sims, open(pkl_dump_dir + "all_sims.json", "w"))
-    json.dump(mean_sim, open(pkl_dump_dir + "mean_sim.json", "w"))
+    json.dump(all_sims, open(pkl_dump_dir + "all_sims_parent.json", "w"))
+    json.dump(mean_sim, open(pkl_dump_dir + "mean_sim_parent.json", "w"))
