@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import spatial
+from keras.preprocessing.text import Tokenizer
 
 
 def cosine_similarity(a, b):
@@ -60,3 +61,9 @@ def print_seed_dict(label_seed_dict):
         print("*" * 80)
         for val in label_seed_dict[label]:
             print(val, label_seed_dict[label][val])
+
+
+def fit_get_tokenizer(data, max_words):
+    tokenizer = Tokenizer(num_words=max_words, filters='!"#%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n')
+    tokenizer.fit_on_texts(data)
+    return tokenizer
