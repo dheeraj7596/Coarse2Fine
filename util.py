@@ -59,4 +59,4 @@ def print_seed_dict(label_seed_dict):
         print(label)
         print("*" * 80)
         for val in label_seed_dict[label]:
-            print(val)
+            print(val, label_seed_dict[label][val])
