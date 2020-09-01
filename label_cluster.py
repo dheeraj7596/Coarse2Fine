@@ -48,6 +48,26 @@ def get_our_algo_arg_max(ph, child_labels, embeddings, label_embeddings, mean_si
         return None, None
 
 
+def get_our_algo_std_dev_arg_max(ph, child_labels, embeddings, label_embeddings, mean_sim, std_dev, threshold=0.0):
+    filtered_phrase = ph.translate(translator)
+    sims = []
+    for ch in child_labels:
+        try:
+            child_label_str = " ".join([t for t in ch.split("_") if t not in stop_words]).strip()
+            sims.append(
+                (cosine_similarity(embeddings[filtered_phrase], label_embeddings[child_label_str]) - mean_sim[ch]) /
+                std_dev[ch])
+        except Exception as e:
+            print("Error while computing cosine sim", e)
+            return None, None
+    sim_softmax = softmax(np.array(sims))
+    if max(sim_softmax) >= threshold:
+        max_ind = np.argmax(sim_softmax)
+        return child_labels[max_ind], max(sim_softmax)
+    else:
+        return None, None
+
+
 def generate_pseudo_labels(df, labels, label_term_dict, tokenizer):
     def argmax_label(count_dict):
         maxi = 0
@@ -104,6 +124,21 @@ def generate_pseudo_labels(df, labels, label_term_dict, tokenizer):
     return X, y, y_true
 
 
+def top_k_seeds(child_seeds_dict, phrase_id, topk=3):
+    label_term_dict = {}
+    for ch in child_seeds_dict:
+        label_term_dict[ch] = []
+        child_seeds_dict[ch] = {k: v for (k, v) in sorted(child_seeds_dict[ch].items(), key=lambda y: -y[1])[:topk]}
+        seeds = list(child_seeds_dict[ch].keys())
+        for s in seeds:
+            try:
+                id = phrase_id[s]
+                label_term_dict[ch].append("fnust" + str(id))
+            except:
+                label_term_dict[ch].append(s)
+    return label_term_dict
+
+
 def modify_seeds(child_seeds_dict, phrase_id):
     label_term_dict = {}
     for ch in child_seeds_dict:
@@ -128,7 +163,7 @@ if __name__ == "__main__":
     # algo = int(sys.argv[2])
 
     thresh = 0.2
-    algo = 1
+    algo = 5
 
     translator = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
     stop_words = set(stopwords.words('english'))
@@ -138,6 +173,7 @@ if __name__ == "__main__":
     label_embeddings = pickle.load(open(pkl_dump_dir + "label_embeddings.pkl", "rb"))
     seed_phrases = json.load(open(pkl_dump_dir + "conwea_top100phrases.json", "r"))
     # mean_sim = json.load(open(pkl_dump_dir + "mean_sim.json", "r"))
+    std_dev = json.load(open(pkl_dump_dir + "std_dev_sim_label_top_words_labels.json", "r"))
     mean_sim = json.load(open(pkl_dump_dir + "mean_sim_label_top_words_labels.json", "r"))
     all_sims = json.load(open(pkl_dump_dir + "all_sims_label_top_words_labels.json", "r"))
 
@@ -160,6 +196,9 @@ if __name__ == "__main__":
             elif algo == 4:
                 ch, maxi = get_our_algo_arg_max(ph, child_labels, embeddings, label_embeddings, mean_sim,
                                                 threshold=thresh)
+            elif algo == 5:
+                ch, maxi = get_our_algo_std_dev_arg_max(ph, child_labels, embeddings, label_embeddings, mean_sim,
+                                                        std_dev, threshold=thresh)
             else:
                 raise ValueError("algo should be in 1,2,3,4")
 
@@ -175,11 +214,12 @@ if __name__ == "__main__":
     print("Missing seeds for: ", set(all_child_labels) - set(child_seeds_dict.keys()))
     print("General Seeds: ", general_seeds)
 
-    json.dump(child_seeds_dict, open(pkl_dump_dir + "child_seeds_dict_label.json", "w"))
+    # json.dump(child_seeds_dict, open(pkl_dump_dir + "child_seeds_dict_label.json", "w"))
 
     df_fine_phrase = pickle.load(open(pkl_dump_dir + "df_fine_phrase.pkl", "rb"))
     tokenizer = fit_get_tokenizer(df_fine_phrase.text, max_words=150000)
-    label_term_dict = modify_seeds(child_seeds_dict, phrase_id)
+    label_term_dict = top_k_seeds(child_seeds_dict, phrase_id)
+    # label_term_dict = modify_seeds(child_seeds_dict, phrase_id)
     X, y, y_true = generate_pseudo_labels(df_fine_phrase, list(set(df_fine_phrase.label)), label_term_dict, tokenizer)
 
     print(classification_report(y_true, y))
