@@ -133,26 +133,34 @@ if __name__ == "__main__":
         clf.fit(embedded_label_skipgrams)
         idx = clf.predict(embedded_label_skipgrams)
         for i, sg in enumerate(label_skipgrams):
-            sg_decoded = decipher_phrase(sg, id_phrase_map)
+            sg_decoded = []
+            for w in sg.strip().split():
+                if w == "placeholder":
+                    sg_decoded.append(w)
+                else:
+                    w_decoded = decipher_phrase(w, id_phrase_map)
+                    sg_decoded.append(w_decoded)
+            sg_decoded = " ".join(sg_decoded)
+
             cluster_id = int(idx[i])
             try:
                 r = label_skipgram_clusters[label][cluster_id]
             except:
                 label_skipgram_clusters[label][cluster_id] = {}
 
-            for w in skipgram_entities[sg]:
-                w_decoded = decipher_phrase(w, id_phrase_map)
-                try:
-                    label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
-                except:
-                    label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
-
-            # for w in skip_gram_word_dict[sg]:
+            # for w in skipgram_entities[sg]:
             #     w_decoded = decipher_phrase(w, id_phrase_map)
             #     try:
             #         label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
             #     except:
             #         label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
+
+            for w in skip_gram_word_dict[sg]:
+                w_decoded = decipher_phrase(w, id_phrase_map)
+                try:
+                    label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
+                except:
+                    label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
 
     pickle.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.pkl", "wb"))
     json.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.json", "w"))
