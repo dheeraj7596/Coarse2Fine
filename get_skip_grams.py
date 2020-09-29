@@ -140,12 +140,19 @@ if __name__ == "__main__":
             except:
                 label_skipgram_clusters[label][cluster_id] = {}
 
-            for w in skip_gram_word_dict[sg]:
+            for w in skipgram_entities[sg]:
                 w_decoded = decipher_phrase(w, id_phrase_map)
                 try:
                     label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
                 except:
                     label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
+
+            # for w in skip_gram_word_dict[sg]:
+            #     w_decoded = decipher_phrase(w, id_phrase_map)
+            #     try:
+            #         label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
+            #     except:
+            #         label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
 
     pickle.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.pkl", "wb"))
     json.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.json", "w"))
