@@ -3,6 +3,7 @@ from classifier_seedwords import preprocess_df
 from sklearn.mixture import GaussianMixture
 from gensim.models import word2vec
 from get_seed_words import decipher_phrase
+import numpy as np
 import pickle
 
 
@@ -79,14 +80,11 @@ def embed_skipgrams(label_skipgrams, embedding_model):
     embedded_label_skipgrams = []
     for sg in label_skipgrams:
         temp = sg.strip().split()
-        vec = None
+        vec = np.zeros(embedding_model["apple"].shape)
         for w in temp:
             if w == "placeholder":
                 continue
-            if vec is None:
-                vec = embedding_model[w]
-            else:
-                vec += embedding_model[w]
+            vec += embedding_model[w]
         vec = vec / (len(temp) - 1)
         embedded_label_skipgrams.append(vec)
     return embedded_label_skipgrams
