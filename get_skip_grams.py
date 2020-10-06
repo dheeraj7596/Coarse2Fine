@@ -99,7 +99,8 @@ def embed_skipgrams(label_skipgrams, embedding_model):
     return embedded_label_skipgrams
 
 
-def update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx, skipgram_entities, id_phrase_map, label):
+def update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx, skip_gram_word_dict,
+                                   skipgram_entities, id_phrase_map, label, type="all"):
     for i, sg in enumerate(label_skipgrams):
         sg_decoded = []
         for w in sg.strip().split():
@@ -116,19 +117,23 @@ def update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx
         except:
             label_skipgram_clusters[label][cluster_id] = {}
 
-        for w in skipgram_entities[sg]:
-            w_decoded = decipher_phrase(w, id_phrase_map)
-            try:
-                label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
-            except:
-                label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
+        if type == "all":
+            # This gets the results from all vocab
+            for w in skip_gram_word_dict[sg]:
+                w_decoded = decipher_phrase(w, id_phrase_map)
+                try:
+                    label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
+                except:
+                    label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
+        else:
+            # This gets the results from only chosen seed words.
+            for w in skipgram_entities[sg]:
+                w_decoded = decipher_phrase(w, id_phrase_map)
+                try:
+                    label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
+                except:
+                    label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
 
-        # for w in skip_gram_word_dict[sg]:
-        #     w_decoded = decipher_phrase(w, id_phrase_map)
-        #     try:
-        #         label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
-        #     except:
-        #         label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
     return label_skipgram_clusters
 
 
@@ -181,7 +186,9 @@ if __name__ == "__main__":
         print("Clustering skipgrams..", flush=True)
         clf.fit(embedded_label_skipgrams)
         idx = clf.predict(embedded_label_skipgrams)
-        label_skipgram_clusters = update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx, skip_gram_word_dict, id_phrase_map, label)
+        label_skipgram_clusters = update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx,
+                                                                 skip_gram_word_dict, skipgram_entities, id_phrase_map,
+                                                                 label)
 
     pickle.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.pkl", "wb"))
     json.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.json", "w"))
