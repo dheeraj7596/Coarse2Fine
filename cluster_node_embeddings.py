@@ -81,7 +81,7 @@ if __name__ == "__main__":
         skip_gram_word_dict = label_skip_gram_word_dict[label]
         entities = list(label_words_phrases[label].keys())
         encoded_entities = encode_phrases(entities, phrase_id)
-        entity_skipgrams = get_skipgrams(encoded_entities, word_skip_gram_dict, skip_gram_word_dict, min_thresh=5,
+        entity_skipgrams = get_skipgrams(encoded_entities, word_skip_gram_dict, skip_gram_word_dict, min_thresh=3,
                                          max_thresh=50)
         skipgram_entities = {}
         for e in entity_skipgrams:
@@ -117,14 +117,18 @@ if __name__ == "__main__":
 
         sg_node_embeddings = []
         for i in index_to_skipgram:
-            sg_node_embeddings.append(node_embeddings["sg" + str(i)])
+            sg_node_embeddings.append(model["sg" + str(i)])
 
-        clf = GaussianMixture(n_components=10, covariance_type="tied", init_params='kmeans', max_iter=100000)
+        if len(sg_node_embeddings) < 10:
+            n_comps = len(sg_node_embeddings)
+        else:
+            n_comps = 10
+        clf = GaussianMixture(n_components=n_comps, covariance_type="tied", init_params='kmeans', max_iter=100000)
         print("Clustering skipgrams..", flush=True)
         clf.fit(sg_node_embeddings)
         idx = clf.predict(sg_node_embeddings)
         label_skipgram_clusters = update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx,
-                                                                 skipgram_entities)
+                                                                 skipgram_entities, id_phrase_map)
 
     pickle.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.pkl", "wb"))
     json.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.json", "w"))
