@@ -54,8 +54,8 @@ def get_graph_metapaths(skip_gram_word_dict, skipgrams):
 
 
 if __name__ == "__main__":
-    base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
-    # base_path = "/data4/dheeraj/coarse2fine/"
+    # base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
+    base_path = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt"
     data_path = base_path + dataset + "/"
 
