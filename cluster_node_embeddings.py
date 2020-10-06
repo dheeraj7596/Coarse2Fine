@@ -10,6 +10,9 @@ from get_seed_words import decipher_phrase
 import numpy as np
 import pickle
 import pandas as pd
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 
 
 def get_graph_metapaths(skip_gram_word_dict, skipgrams):
