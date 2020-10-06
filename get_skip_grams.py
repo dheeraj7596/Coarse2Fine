@@ -99,7 +99,7 @@ def embed_skipgrams(label_skipgrams, embedding_model):
     return embedded_label_skipgrams
 
 
-def update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx, skipgram_entities, id_phrase_map):
+def update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx, skipgram_entities, id_phrase_map, label):
     for i, sg in enumerate(label_skipgrams):
         sg_decoded = []
         for w in sg.strip().split():
@@ -181,7 +181,7 @@ if __name__ == "__main__":
         print("Clustering skipgrams..", flush=True)
         clf.fit(embedded_label_skipgrams)
         idx = clf.predict(embedded_label_skipgrams)
-        label_skipgram_clusters = update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx, skip_gram_word_dict, id_phrase_map)
+        label_skipgram_clusters = update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx, skip_gram_word_dict, id_phrase_map, label)
 
     pickle.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.pkl", "wb"))
     json.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.json", "w"))
