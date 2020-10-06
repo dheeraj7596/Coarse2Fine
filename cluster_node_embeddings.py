@@ -124,7 +124,7 @@ if __name__ == "__main__":
         clf.fit(sg_node_embeddings)
         idx = clf.predict(sg_node_embeddings)
         label_skipgram_clusters = update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx,
-                                                                 skip_gram_word_dict)
+                                                                 skipgram_entities)
 
     pickle.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.pkl", "wb"))
     json.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.json", "w"))

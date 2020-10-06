@@ -99,7 +99,7 @@ def embed_skipgrams(label_skipgrams, embedding_model):
     return embedded_label_skipgrams
 
 
-def update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx, skip_gram_word_dict):
+def update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx, skipgram_entities):
     for i, sg in enumerate(label_skipgrams):
         sg_decoded = []
         for w in sg.strip().split():
@@ -116,19 +116,19 @@ def update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx
         except:
             label_skipgram_clusters[label][cluster_id] = {}
 
-        # for w in skipgram_entities[sg]:
-        #     w_decoded = decipher_phrase(w, id_phrase_map)
-        #     try:
-        #         label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
-        #     except:
-        #         label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
-
-        for w in skip_gram_word_dict[sg]:
+        for w in skipgram_entities[sg]:
             w_decoded = decipher_phrase(w, id_phrase_map)
             try:
                 label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
             except:
                 label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
+
+        # for w in skip_gram_word_dict[sg]:
+        #     w_decoded = decipher_phrase(w, id_phrase_map)
+        #     try:
+        #         label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
+        #     except:
+        #         label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
     return label_skipgram_clusters
 
 
