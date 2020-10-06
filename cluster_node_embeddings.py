@@ -130,5 +130,5 @@ if __name__ == "__main__":
         label_skipgram_clusters = update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx,
                                                                  skipgram_entities, id_phrase_map)
 
-    pickle.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.pkl", "wb"))
-    json.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.json", "w"))
+    pickle.dump(label_skipgram_clusters, open(data_path + "label_specific_metapath2vec_skipgram_clusters.pkl", "wb"))
+    json.dump(label_skipgram_clusters, open(data_path + "label_specific_metapath2vec_skipgram_clusters.json", "w"))
