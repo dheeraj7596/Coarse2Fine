@@ -43,25 +43,34 @@ def get_all_skipgrams(df):
         return word_skip_gram_dict, skip_gram_word_dict
 
     place_holder = "placeholder"
-    word_skip_gram_dict = {}  # map from word to its respective skip-grams
-    skip_gram_word_dict = {}  # map from skip-gram to its respective words
-    for i, row in df.iterrows():
-        sent = row["text"]
-        tokens = sent.strip().split()
-        for j in range(len(tokens)):
-            word_skip_gram_dict, skip_gram_word_dict = add_to_dic(word_skip_gram_dict, skip_gram_word_dict, tokens,
-                                                                  j, [j - 1, place_holder, j + 1])
-            word_skip_gram_dict, skip_gram_word_dict = add_to_dic(word_skip_gram_dict, skip_gram_word_dict, tokens,
-                                                                  j, [j - 2, j - 1, place_holder, j + 1])
-            word_skip_gram_dict, skip_gram_word_dict = add_to_dic(word_skip_gram_dict, skip_gram_word_dict, tokens,
-                                                                  j, [j - 3, j - 2, j - 1, place_holder, j + 1])
-            word_skip_gram_dict, skip_gram_word_dict = add_to_dic(word_skip_gram_dict, skip_gram_word_dict, tokens,
-                                                                  j, [j - 1, place_holder, j + 1, j + 2, j + 3])
-            word_skip_gram_dict, skip_gram_word_dict = add_to_dic(word_skip_gram_dict, skip_gram_word_dict, tokens,
-                                                                  j, [j - 2, j - 1, place_holder, j + 1, j + 2])
-            word_skip_gram_dict, skip_gram_word_dict = add_to_dic(word_skip_gram_dict, skip_gram_word_dict, tokens,
-                                                                  j, [j - 1, place_holder, j + 1, j + 2])
-    return word_skip_gram_dict, skip_gram_word_dict
+    label_word_skip_gram_dict = {}
+    label_skip_gram_word_dict = {}
+    labels = list(set(df.label))
+
+    for l in labels:
+        word_skip_gram_dict = {}  # map from word to its respective skip-grams
+        skip_gram_word_dict = {}  # map from skip-gram to its respective words
+        temp_df = df[df.label.isin([l])]
+        temp_df = temp_df.reset_index(drop=True)
+        for i, row in temp_df.iterrows():
+            sent = row["text"]
+            tokens = sent.strip().split()
+            for j in range(len(tokens)):
+                word_skip_gram_dict, skip_gram_word_dict = add_to_dic(word_skip_gram_dict, skip_gram_word_dict, tokens,
+                                                                      j, [j - 1, place_holder, j + 1])
+                word_skip_gram_dict, skip_gram_word_dict = add_to_dic(word_skip_gram_dict, skip_gram_word_dict, tokens,
+                                                                      j, [j - 2, j - 1, place_holder, j + 1])
+                word_skip_gram_dict, skip_gram_word_dict = add_to_dic(word_skip_gram_dict, skip_gram_word_dict, tokens,
+                                                                      j, [j - 3, j - 2, j - 1, place_holder, j + 1])
+                word_skip_gram_dict, skip_gram_word_dict = add_to_dic(word_skip_gram_dict, skip_gram_word_dict, tokens,
+                                                                      j, [j - 1, place_holder, j + 1, j + 2, j + 3])
+                word_skip_gram_dict, skip_gram_word_dict = add_to_dic(word_skip_gram_dict, skip_gram_word_dict, tokens,
+                                                                      j, [j - 2, j - 1, place_holder, j + 1, j + 2])
+                word_skip_gram_dict, skip_gram_word_dict = add_to_dic(word_skip_gram_dict, skip_gram_word_dict, tokens,
+                                                                      j, [j - 1, place_holder, j + 1, j + 2])
+        label_word_skip_gram_dict[l] = word_skip_gram_dict
+        label_skip_gram_word_dict[l] = skip_gram_word_dict
+    return label_word_skip_gram_dict, label_skip_gram_word_dict
 
 
 def get_skipgrams(encoded_entities, word_skip_gram_dict, skip_gram_word_dict, min_thresh=5, max_thresh=50):
@@ -90,9 +99,42 @@ def embed_skipgrams(label_skipgrams, embedding_model):
     return embedded_label_skipgrams
 
 
+def update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx, skip_gram_word_dict):
+    for i, sg in enumerate(label_skipgrams):
+        sg_decoded = []
+        for w in sg.strip().split():
+            if w == "placeholder":
+                sg_decoded.append(w)
+            else:
+                w_decoded = decipher_phrase(w, id_phrase_map)
+                sg_decoded.append(w_decoded)
+        sg_decoded = " ".join(sg_decoded)
+
+        cluster_id = int(idx[i])
+        try:
+            r = label_skipgram_clusters[label][cluster_id]
+        except:
+            label_skipgram_clusters[label][cluster_id] = {}
+
+        # for w in skipgram_entities[sg]:
+        #     w_decoded = decipher_phrase(w, id_phrase_map)
+        #     try:
+        #         label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
+        #     except:
+        #         label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
+
+        for w in skip_gram_word_dict[sg]:
+            w_decoded = decipher_phrase(w, id_phrase_map)
+            try:
+                label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
+            except:
+                label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
+    return label_skipgram_clusters
+
+
 if __name__ == "__main__":
-    # base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
-    base_path = "/data4/dheeraj/coarse2fine/"
+    base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
+    # base_path = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt"
     data_path = base_path + dataset + "/"
 
@@ -103,14 +145,21 @@ if __name__ == "__main__":
     label_words_phrases = json.load(open(data_path + "conwea_top100words_phrases.json", "r"))
     phrase_id = pickle.load(open(data_path + "phrase_id_coarse_map.pkl", "rb"))
     id_phrase_map = pickle.load(open(data_path + "id_phrase_coarse_map.pkl", "rb"))
-    word_skip_gram_dict = pickle.load(open(data_path + "word_skip_gram_dict.pkl", "rb"))
-    skip_gram_word_dict = pickle.load(open(data_path + "skip_gram_word_dict.pkl", "rb"))
+
+    # label_word_skip_gram_dict, label_skip_gram_word_dict = get_all_skipgrams(df)
+    # pickle.dump(label_word_skip_gram_dict, open(data_path + "label_word_skip_gram_dict.pkl", "wb"))
+    # pickle.dump(label_skip_gram_word_dict, open(data_path + "label_skip_gram_word_dict.pkl", "wb"))
+
+    label_word_skip_gram_dict = pickle.load(open(data_path + "label_word_skip_gram_dict.pkl", "rb"))
+    label_skip_gram_word_dict = pickle.load(open(data_path + "label_skip_gram_word_dict.pkl", "rb"))
+
     print("Loaded skipgram maps..", flush=True)
     embedding_model = word2vec.Word2Vec.load(data_path + "word2vec.model")
     print("Loaded word2vec model..", flush=True)
-    # word_skip_gram_dict, skip_gram_word_dict = get_all_skipgrams(df)
     label_skipgram_clusters = {}
     for label in label_words_phrases:
+        word_skip_gram_dict = label_word_skip_gram_dict[label]
+        skip_gram_word_dict = label_skip_gram_word_dict[label]
         print("Getting skipgrams for ", label, flush=True)
         label_skipgram_clusters[label] = {}
         clf = GaussianMixture(n_components=10, covariance_type="tied", init_params='kmeans', max_iter=50)
@@ -132,35 +181,7 @@ if __name__ == "__main__":
         print("Clustering skipgrams..", flush=True)
         clf.fit(embedded_label_skipgrams)
         idx = clf.predict(embedded_label_skipgrams)
-        for i, sg in enumerate(label_skipgrams):
-            sg_decoded = []
-            for w in sg.strip().split():
-                if w == "placeholder":
-                    sg_decoded.append(w)
-                else:
-                    w_decoded = decipher_phrase(w, id_phrase_map)
-                    sg_decoded.append(w_decoded)
-            sg_decoded = " ".join(sg_decoded)
-
-            cluster_id = int(idx[i])
-            try:
-                r = label_skipgram_clusters[label][cluster_id]
-            except:
-                label_skipgram_clusters[label][cluster_id] = {}
-
-            # for w in skipgram_entities[sg]:
-            #     w_decoded = decipher_phrase(w, id_phrase_map)
-            #     try:
-            #         label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
-            #     except:
-            #         label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
-
-            for w in skip_gram_word_dict[sg]:
-                w_decoded = decipher_phrase(w, id_phrase_map)
-                try:
-                    label_skipgram_clusters[label][cluster_id][sg_decoded].append(w_decoded)
-                except:
-                    label_skipgram_clusters[label][cluster_id][sg_decoded] = [w_decoded]
+        label_skipgram_clusters = update_label_skipgram_clusters(label_skipgram_clusters, label_skipgrams, idx, skip_gram_word_dict)
 
     pickle.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.pkl", "wb"))
     json.dump(label_skipgram_clusters, open(data_path + "label_skipgram_clusters.json", "w"))
