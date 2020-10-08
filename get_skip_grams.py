@@ -7,13 +7,17 @@ import numpy as np
 import pickle
 
 
+def encode_phrase(entity, phrase_id):
+    try:
+        id = phrase_id[entity]
+        return "fnust" + str(id)
+    except:
+        return entity
+
+
 def encode_phrases(entities, phrase_id):
     for i, s in enumerate(entities):
-        try:
-            id = phrase_id[s]
-            entities[i] = "fnust" + str(id)
-        except:
-            continue
+        entities[i] = encode_phrase(s, phrase_id)
     return entities
 
 
