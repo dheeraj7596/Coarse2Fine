@@ -4,7 +4,7 @@ from util import fit_get_tokenizer
 from nltk.corpus import stopwords
 from get_seed_words import decipher_phrase
 from get_skip_grams import encode_phrase
-import json
+import json, math
 
 
 def get_conditional_probability(texts, a, b, mode="doc"):
@@ -22,6 +22,26 @@ def get_conditional_probability(texts, a, b, mode="doc"):
             return num / den
         else:
             return 0
+
+
+def get_pmi(texts, a, b, mode="doc"):
+    con_num = 0
+    con_den = 0
+    den = 0
+    if mode == "doc":
+        for sent in texts:
+            tokens = set(sent.strip().split())
+            if a in tokens:
+                con_den += 1
+                if b in tokens:
+                    con_num += 1
+            if b in tokens:
+                den += 1
+
+        if con_den == 0 or den == 0 or con_num == 0:
+            return -math.inf
+        else:
+            return math.log((con_num * len(texts)) / (con_den * den))
 
 
 if __name__ == "__main__":
@@ -48,11 +68,14 @@ if __name__ == "__main__":
             words[ch] = {}
             child_label_str = encode_phrase(" ".join([t for t in ch.split("_") if t not in stop_words]).strip(),
                                             phrase_id)
-            thresh = get_conditional_probability(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
+            # thresh = get_conditional_probability(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
+            thresh = get_pmi(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
             print("Threshold for ", p, ch, str(thresh))
             for tok in tokenizer.word_index:
-                prob = get_conditional_probability(temp_df.text, tok, child_label_str)
+                # prob = get_conditional_probability(temp_df.text, tok, child_label_str)
+                prob = get_pmi(temp_df.text, tok, child_label_str)
                 if prob >= thresh:
                     words[ch][decipher_phrase(tok, id_phrase_map)] = prob
 
-    json.dump(words, open(data_path + "conditional_prob_doc.json", "w"))
+    # json.dump(words, open(data_path + "conditional_prob_doc.json", "w"))
+    json.dump(words, open(data_path + "pmi_doc.json", "w"))
