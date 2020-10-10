@@ -24,7 +24,7 @@ def get_conditional_probability(texts, a, b, mode="doc"):
             return 0
 
 
-def get_conditional_probability_words(texts, tokenizer, mode="doc"):
+def get_conditional_probability_words(texts, label_str, tokenizer, mode="doc"):
     # computes p(b|a)
     num = {}
     den = {}
@@ -37,7 +37,7 @@ def get_conditional_probability_words(texts, tokenizer, mode="doc"):
                     den[tok] += 1
                 except:
                     den[tok] = 1
-                if child_label_str in tokens:
+                if label_str in tokens:
                     try:
                         num[tok] += 1
                     except:
@@ -89,12 +89,13 @@ if __name__ == "__main__":
     # child_to_parent = pickle.load(open(data_path + "child_to_parent.pkl", "rb"))
     parent_to_child = pickle.load(open(data_path + "parent_to_child.pkl", "rb"))
 
+    parent_labels = ["sports", "arts", "science"]
     stop_words = set(stopwords.words('english'))
     stop_words.add('would')
     words = {}
     threshold = {}
     probability = {}
-    for p in ["sports", "arts", "science"]:
+    for p in parent_labels:
         temp_df = df[df.label.isin([p])].reset_index(drop=True)
         tokenizer = fit_get_tokenizer(temp_df.text, max_words=150000)
         for ch in parent_to_child[p]:
@@ -104,7 +105,7 @@ if __name__ == "__main__":
             thresh = get_conditional_probability(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
             # thresh = get_pmi(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
             print("Threshold for ", p, ch, str(thresh))
-            prob = get_conditional_probability_words(temp_df.text, tokenizer)
+            prob = get_conditional_probability_words(temp_df.text, child_label_str, tokenizer)
             # prob = get_pmi(temp_df.text, tok, child_label_str)
             for tok in tokenizer.word_index:
                 assert tok in prob
@@ -113,19 +114,75 @@ if __name__ == "__main__":
             threshold[ch] = thresh
             probability[ch] = prob
 
+    for p in parent_labels:
+        temp_df = df[df.label.isin([p])].reset_index(drop=True)
+        tokenizer = fit_get_tokenizer(temp_df.text, max_words=150000)
+        parent_label_str = encode_phrase(" ".join([t for t in p.split("_") if t not in stop_words]).strip(), phrase_id)
+        # thresh = get_pmi(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
+        prob = get_conditional_probability_words(temp_df.text, parent_label_str, tokenizer)
+        # prob = get_pmi(temp_df.text, tok, child_label_str)
+        probability[p] = prob
+
+    # words has deciphered phrase whereas probability has encoded phrase.
+    for p in parent_labels:
         for ch in parent_to_child[p]:
+            # siblings = set(words.keys()) - {ch}
             siblings = set(parent_to_child[p]) - {ch}
+            uncles = set(parent_labels) - {p}
+            cousins = set(words.keys()) - set(parent_to_child[p])
             removed_words = []
             for word in words[ch]:
+                encoded_word = encode_phrase(word, phrase_id)
+                flag = 0
                 for sb in siblings:
                     try:
-                        if probability[sb][word] >= words[ch][word] or probability[sb][word] >= threshold[sb]:
+                        if probability[sb][encoded_word] >= words[ch][word] or probability[sb][encoded_word] >= \
+                                threshold[sb]:
                             removed_words.append(word)
+                            flag = 1
+                            break
+                    except:
+                        continue
+
+                if flag == 1:
+                    continue
+
+                for cousin in cousins:
+                    try:
+                        if probability[cousin][encoded_word] >= words[ch][word] or \
+                                probability[cousin][encoded_word] >= threshold[cousin]:
+                            removed_words.append(word)
+                            flag = 1
+                            break
+                    except:
+                        continue
+
+                if flag == 1:
+                    continue
+
+                for sb in siblings:
+                    try:
+                        if probability[sb][encoded_word] >= probability[p][encoded_word]:
+                            removed_words.append(word)
+                            flag = 1
+                            break
+                    except:
+                        continue
+
+                if flag == 1:
+                    continue
+
+                for lbl in uncles:
+                    try:
+                        if probability[lbl][encoded_word] >= probability[p][encoded_word]:
+                            removed_words.append(word)
+                            flag = 1
+                            break
                     except:
                         continue
 
             for w in removed_words:
                 words[ch].pop(w, None)
 
-    # json.dump(words, open(data_path + "conditional_prob_doc.json", "w"))
-    json.dump(words, open(data_path + "pmi_doc.json", "w"))
+    json.dump(words, open(data_path + "conditional_prob_doc_all_filters.json", "w"))
+    # json.dump(words, open(data_path + "pmi_doc.json", "w"))
