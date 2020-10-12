@@ -56,6 +56,7 @@ def get_conditional_probability_words(texts, label_str, tokenizer, mode="doc"):
 
 
 def get_pmi(texts, a, b, mode="doc"):
+    # computes log(P(b|a)/P(b))
     con_num = 0
     con_den = 0
     den = 0
@@ -75,11 +76,49 @@ def get_pmi(texts, a, b, mode="doc"):
             return math.log((con_num * len(texts)) / (con_den * den))
 
 
+def get_pmi_words(texts, label_str, tokenizer, mode="doc"):
+    # computes log(P(label_str|tok)/P(label_str))
+    con_num = {}
+    con_den = {}
+    den = {}
+    prob = {}
+    if mode == "doc":
+        for sent in texts:
+            tokens = set(sent.strip().split())
+            for tok in tokens:
+                try:
+                    con_den[tok] += 1
+                except:
+                    con_den[tok] = 1
+                if label_str in tokens:
+                    try:
+                        con_num[tok] += 1
+                    except:
+                        con_num[tok] = 1
+            if label_str in tokens:
+                try:
+                    den[label_str] += 1
+                except:
+                    den[label_str] = 1
+
+        for tok in tokenizer.word_index:
+            try:
+                if con_num[tok] == 0 or con_den[tok] == 0 or den[label_str] == 0:
+                    prob[tok] = -math.inf
+                else:
+                    prob[tok] = math.log((con_num[tok] * len(texts)) / (con_den[tok] * den[label_str]))
+            except:
+                prob[tok] = -math.inf
+    return prob
+
+
 if __name__ == "__main__":
     base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     # base_path = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt"
     data_path = base_path + dataset + "/"
+    func = "pmi"
+    assert func in ["pmi", "cond_prob"]  # this could be either pmi or cond_prob
 
     df = pickle.load(open(data_path + "df_coarse_phrase.pkl", "rb"))
     phrase_id = pickle.load(open(data_path + "phrase_id_coarse_map.pkl", "rb"))
@@ -102,11 +141,13 @@ if __name__ == "__main__":
             words[ch] = {}
             child_label_str = encode_phrase(" ".join([t for t in ch.split("_") if t not in stop_words]).strip(),
                                             phrase_id)
-            thresh = get_conditional_probability(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
-            # thresh = get_pmi(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
+            if func == "cond_prob":
+                thresh = get_conditional_probability(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
+                prob = get_conditional_probability_words(temp_df.text, child_label_str, tokenizer)
+            elif func == "pmi":
+                thresh = get_pmi(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
+                prob = get_pmi_words(temp_df.text, child_label_str, tokenizer)
             print("Threshold for ", p, ch, str(thresh))
-            prob = get_conditional_probability_words(temp_df.text, child_label_str, tokenizer)
-            # prob = get_pmi(temp_df.text, tok, child_label_str)
             for tok in tokenizer.word_index:
                 assert tok in prob
                 if prob[tok] >= thresh:
@@ -118,9 +159,10 @@ if __name__ == "__main__":
         temp_df = df[df.label.isin([p])].reset_index(drop=True)
         tokenizer = fit_get_tokenizer(temp_df.text, max_words=150000)
         parent_label_str = encode_phrase(" ".join([t for t in p.split("_") if t not in stop_words]).strip(), phrase_id)
-        # thresh = get_pmi(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
-        prob = get_conditional_probability_words(temp_df.text, parent_label_str, tokenizer)
-        # prob = get_pmi(temp_df.text, tok, child_label_str)
+        if func == "cond_prob":
+            prob = get_conditional_probability_words(temp_df.text, parent_label_str, tokenizer)
+        elif func == "pmi":
+            prob = get_pmi_words(temp_df.text, parent_label_str, tokenizer)
         probability[p] = prob
 
     # words has deciphered phrase whereas probability has encoded phrase.
@@ -184,5 +226,7 @@ if __name__ == "__main__":
             for w in removed_words:
                 words[ch].pop(w, None)
 
-    json.dump(words, open(data_path + "conditional_prob_doc_all_filters.json", "w"))
-    # json.dump(words, open(data_path + "pmi_doc.json", "w"))
+    if func == "cond_prob":
+        json.dump(words, open(data_path + "conditional_prob_doc_all_filters.json", "w"))
+    elif func == "pmi":
+        json.dump(words, open(data_path + "pmi_doc_all_filters.json", "w"))
