@@ -147,6 +147,8 @@ if __name__ == "__main__":
             elif func == "pmi":
                 thresh = get_pmi(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
                 prob = get_pmi_words(temp_df.text, child_label_str, tokenizer)
+                if thresh < 0:
+                    thresh = 0
             print("Threshold for ", p, ch, str(thresh))
             for tok in tokenizer.word_index:
                 assert tok in prob
@@ -223,9 +225,24 @@ if __name__ == "__main__":
                     except:
                         continue
 
+                if flag == 1:
+                    continue
+
+                for lbl in uncles:
+                    for children_uncle in parent_to_child[lbl]:
+                        try:
+                            if probability[children_uncle][encoded_word] >= probability[lbl][encoded_word]:
+                                removed_words.append(word)
+                                flag = 1
+                                break
+                        except:
+                            continue
+
             for w in removed_words:
                 words[ch].pop(w, None)
 
+    for ch in words:
+        words[ch] = {k: v for k, v in sorted(words[ch].items(), key=lambda item: -item[1])}
     if func == "cond_prob":
         json.dump(words, open(data_path + "conditional_prob_doc_all_filters.json", "w"))
     elif func == "pmi":

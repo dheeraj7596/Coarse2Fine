@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import spatial
 from keras.preprocessing.text import Tokenizer
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 
 def cosine_similarity(a, b):
@@ -67,3 +68,10 @@ def fit_get_tokenizer(data, max_words):
     tokenizer = Tokenizer(num_words=max_words, filters='!"#%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n')
     tokenizer.fit_on_texts(data)
     return tokenizer
+
+
+def plot_confusion_mat(y_true, y_pred, labels):
+    cm = confusion_matrix(y_true, y_pred, labels=labels)
+    display_labels = labels
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=display_labels)
+    return disp.plot(include_values=True, cmap='viridis', ax=None, xticks_rotation="horizontal", values_format=None)

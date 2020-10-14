@@ -84,6 +84,7 @@ def generate_pseudo_labels(df, labels, label_term_dict, tokenizer):
     y = []
     X = []
     y_true = []
+    words_cmn = []
     index_word = {}
     for w in tokenizer.word_index:
         index_word[tokenizer.word_index[w]] = w
@@ -121,7 +122,11 @@ def generate_pseudo_labels(df, labels, label_term_dict, tokenizer):
             y.append(lbl)
             X.append(line)
             y_true.append(label)
-    return X, y, y_true
+            seed_words = set()
+            for w in label_term_dict[lbl]:
+                seed_words.add(w)
+            words_cmn.append(" ".join(list(set(words).intersection(seed_words))))
+    return X, y, y_true, words_cmn
 
 
 def top_k_seeds(child_seeds_dict, phrase_id, topk=3):
@@ -220,7 +225,8 @@ if __name__ == "__main__":
     tokenizer = fit_get_tokenizer(df_fine_phrase.text, max_words=150000)
     label_term_dict = top_k_seeds(child_seeds_dict, phrase_id)
     # label_term_dict = modify_seeds(child_seeds_dict, phrase_id)
-    X, y, y_true = generate_pseudo_labels(df_fine_phrase, list(set(df_fine_phrase.label)), label_term_dict, tokenizer)
+    X, y, y_true, _ = generate_pseudo_labels(df_fine_phrase, list(set(df_fine_phrase.label)), label_term_dict,
+                                             tokenizer)
 
     print(classification_report(y_true, y))
     pass
