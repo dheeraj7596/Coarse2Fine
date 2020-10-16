@@ -12,6 +12,7 @@ if __name__ == "__main__":
     # base_path = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt"
     data_path = base_path + dataset + "/"
+    dump_csv = False
 
     df = pickle.load(open(data_path + "df_fine_phrase.pkl", "rb"))
     phrase_id = pickle.load(open(data_path + "phrase_id_coarse_map.pkl", "rb"))
@@ -47,9 +48,10 @@ if __name__ == "__main__":
     for i, s in enumerate(words_common_all):
         words_common_all[i] = " ".join([decipher_phrase(w, id_phrase_map) for w in s.strip().split()])
 
-    df_tmp = pd.DataFrame.from_dict(
-        {"text": X_all, "pseudo_label": y_all, "true_label": y_true_all, "words_cmn": words_common_all})
-    df_tmp.to_csv(data_path + "pseudo.csv")
+    if dump_csv:
+        df_tmp = pd.DataFrame.from_dict(
+            {"text": X_all, "pseudo_label": y_all, "true_label": y_true_all, "words_cmn": words_common_all})
+        df_tmp.to_csv(data_path + "pseudo.csv")
     print(classification_report(y_true_all, y_all))
 
     plot_confusion_mat(y_true_all, y_all, list(set(y_true_all)))

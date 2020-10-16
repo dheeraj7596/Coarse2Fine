@@ -76,7 +76,7 @@ def get_pmi(texts, a, b, mode="doc"):
             return math.log((con_num * len(texts)) / (con_den * den))
 
 
-def get_pmi_words(texts, label_str, tokenizer, mode="doc"):
+def get_pmi_words(texts, label_str, tokenizer, mode="doc", min_coc_threshold=5, min_frequency=5):
     # computes log(P(label_str|tok)/P(label_str))
     con_num = {}
     con_den = {}
@@ -103,7 +103,8 @@ def get_pmi_words(texts, label_str, tokenizer, mode="doc"):
 
         for tok in tokenizer.word_index:
             try:
-                if con_num[tok] == 0 or con_den[tok] == 0 or den[label_str] == 0:
+                if con_num[tok] == 0 or con_den[tok] == 0 or den[label_str] == 0 or con_num[tok] < min_coc_threshold or \
+                        con_den[tok] < min_frequency:
                     prob[tok] = -math.inf
                 else:
                     prob[tok] = math.log((con_num[tok] * len(texts)) / (con_den[tok] * den[label_str]))
