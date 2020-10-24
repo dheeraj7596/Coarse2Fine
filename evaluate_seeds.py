@@ -14,11 +14,11 @@ if __name__ == "__main__":
     data_path = base_path + dataset + "/"
     dump_csv = False
 
-    df = pickle.load(open(data_path + "df_fine_phrase.pkl", "rb"))
-    phrase_id = pickle.load(open(data_path + "phrase_id_coarse_map.pkl", "rb"))
-    id_phrase_map = pickle.load(open(data_path + "id_phrase_coarse_map.pkl", "rb"))
+    df = pickle.load(open(data_path + "df_fine_phrase_stem.pkl", "rb"))
+    phrase_id = pickle.load(open(data_path + "phrase_id_coarse_stem_map.pkl", "rb"))
+    id_phrase_map = pickle.load(open(data_path + "id_phrase_coarse_stem_map.pkl", "rb"))
     # child_seeds_dict = json.load(open(data_path + "conditional_prob_doc_all_filters.json", "r"))
-    child_seeds_dict = json.load(open(data_path + "pmi_doc_all_filters.json", "r"))
+    child_seeds_dict = json.load(open(data_path + "pmi_doc_all_filters_stem.json", "r"))
     child_to_parent = pickle.load(open(data_path + "child_to_parent.pkl", "rb"))
     parent_to_child = pickle.load(open(data_path + "parent_to_child.pkl", "rb"))
     child_labels = list(child_seeds_dict.keys())

@@ -131,7 +131,11 @@ if __name__ == "__main__":
     # child_to_parent = pickle.load(open(data_path + "child_to_parent.pkl", "rb"))
     parent_to_child = pickle.load(open(data_path + "parent_to_child.pkl", "rb"))
 
-    parent_labels = ["sports", "arts", "science"]
+    parent_labels = ["sports", "arts", "science", "business", "politics"]
+    # parent_to_child["science"] = ["spacecraft", "environment"]
+    # parent_to_child["business"] = ["stocks", "energy", "economy", "euro"]
+    # parent_to_child["politics"] = ["budget", "medicaid", "judge", "gay", "weapons", "surveillance", "immigration", "military", "abortion"]
+
     stop_words = set(stopwords.words('english'))
     stop_words.add('would')
     words = {}
@@ -141,12 +145,6 @@ if __name__ == "__main__":
         temp_df = df[df.label.isin([p])].reset_index(drop=True)
         tokenizer = fit_get_tokenizer(temp_df.text, max_words=150000)
         for ch in parent_to_child[p]:
-            if ch == "cosmos":
-                ch = "nasa"
-            # if ch == "environment":
-            #     ch = "carbon"
-            # if ch == "television":
-            #     ch = "tv"
             words[ch] = {}
             child_label_str = encode_phrase(" ".join([stemmer.stem(t) for t in ch.split("_") if stemmer.stem(
                 t) not in stop_words and t not in stop_words]).strip(), phrase_id)
@@ -182,13 +180,6 @@ if __name__ == "__main__":
     # words has deciphered phrase whereas probability has encoded phrase.
     for p in parent_labels:
         for ch in parent_to_child[p]:
-            if ch == "cosmos":
-                ch = "nasa"
-            # if ch == "environment":
-            #     ch = "env"
-            # if ch == "television":
-            #     ch = "tv"
-            # siblings = set(words.keys()) - {ch}
             siblings = set(parent_to_child[p]) - {ch}
             uncles = set(parent_labels) - {p}
             cousins = set(words.keys()) - set(parent_to_child[p])
@@ -265,3 +256,4 @@ if __name__ == "__main__":
         json.dump(words, open(data_path + "conditional_prob_doc_all_filters_stem.json", "w"))
     elif func == "pmi":
         json.dump(words, open(data_path + "pmi_doc_all_filters_stem.json", "w"))
+        pickle.dump(probability, open(data_path + "label_pmi_map.pkl", "wb"))

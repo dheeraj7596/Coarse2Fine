@@ -93,7 +93,7 @@ if __name__ == "__main__":
     child_to_parent = pickle.load(open(data_path + "child_to_parent.pkl", "rb"))
     parent_to_child = pickle.load(open(data_path + "parent_to_child.pkl", "rb"))
 
-    parent_labels = ["sports", "arts"]
+    parent_labels = ["science", "sports", "arts", "business", "politics"]
 
     X_all = []
     y_all = []
@@ -103,9 +103,37 @@ if __name__ == "__main__":
         children = parent_to_child[p]
 
         temp_df = df[df.label.isin(children)].reset_index(drop=True)
+        if p == "science":
+            children = ["spacecraft", "environment"]
+        elif p == "business":
+            children = ["stocks", "energy", "economy", "euro"]
+        elif p == "politics":
+            children = ["budget", "medicaid", "judge", "gay", "weapons", "surveillance", "immigration", "military",
+                        "abortion"]
         print("Length of df for parent", p, len(temp_df))
         tokenizer = fit_get_tokenizer(temp_df.text, max_words=150000)
         X, y, y_true = generate_pseudo_labels_pmi(temp_df, children, tokenizer, probability, phrase_id)
+        for i, lb in enumerate(y):
+            if lb == "spacecraft":
+                y[i] = "cosmos"
+            elif lb == "stocks":
+                y[i] = "stocks_and_bonds"
+            elif lb == "energy":
+                y[i] = "energy_companies"
+            elif lb == "euro":
+                y[i] = "international_business"
+            elif lb == "budget":
+                y[i] = "federal_budget"
+            elif lb == "medicaid":
+                y[i] = "the_affordable_care_act"
+            elif lb == "judge":
+                y[i] = "law_enforcement"
+            elif lb == "gay":
+                y[i] = "gay_rights"
+            elif lb == "weapons":
+                y[i] = "gun_control"
+            else:
+                y[i] = lb
         X_all += X
         y_all += y
         y_true_all += y_true

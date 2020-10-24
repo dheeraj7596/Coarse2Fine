@@ -5,7 +5,7 @@ if __name__ == "__main__":
     dataset = "nyt"
     data_path = base_path + dataset + "/"
 
-    df = pickle.load(open(data_path + "df_coarse.pkl", "rb"))
+    df = pickle.load(open(data_path + "df_coarse_stem.pkl", "rb"))
 
     reviews = list(df["text"])
 
