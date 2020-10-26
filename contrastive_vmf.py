@@ -20,8 +20,8 @@ class Logcmk(torch.autograd.Function):
         m = 100
         ctx.save_for_backward(k)
         k = k.double()
-        answer = (m / 2 - 1) * torch.log(k) - torch.log(scipy.special.ive(m / 2 - 1, k)).cuda() - k - (m / 2) * np.log(
-            2 * np.pi)
+        answer = (m / 2 - 1) * torch.log(k) - torch.log(torch.Tensor(scipy.special.ive(m / 2 - 1, k))) - torch.Tensor(
+            k) - (m / 2) * torch.Tensor(np.log(2 * np.pi))
         # answer = (m / 2 - 1) * torch.log(k) - torch.log(scipy.special.ive(m / 2 - 1, k)).to(device) - k - (m / 2) * torch.tensor(np.log(2 * np.pi))
         # answer = (m / 2 - 1) * torch.log(k)
         # answer = answer - torch.log(torch.tensor(scipy.special.ive(m / 2 - 1, k)))
