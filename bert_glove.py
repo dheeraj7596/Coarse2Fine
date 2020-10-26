@@ -246,20 +246,21 @@ def test(df_test, tokenizer, model, label_embeddings, device, index_to_label, is
 
 
 if __name__ == "__main__":
-    basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
-    # basepath = "/data4/dheeraj/coarse2fine/"
+    # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
+    basepath = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
-    glove_dir = "/Users/dheerajmekala/Work/metaguide/data/glove.6B"
+    # glove_dir = "/Users/dheerajmekala/Work/metaguide/data/glove.6B"
+    glove_dir = "/data4/dheeraj/metaguide/glove.6B"
 
     tok_path = pkl_dump_dir + "bert/tokenizer"
     model_path = pkl_dump_dir + "bert/model"
     os.makedirs(tok_path, exist_ok=True)
     os.makedirs(model_path, exist_ok=True)
 
-    # use_gpu = int(sys.argv[1])
-    use_gpu = False
-    # gpu_id = int(sys.argv[2])
+    use_gpu = int(sys.argv[1])
+    # use_gpu = False
+    gpu_id = int(sys.argv[2])
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
