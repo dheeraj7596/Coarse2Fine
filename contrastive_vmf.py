@@ -10,7 +10,7 @@ class Logcmk(torch.autograd.Function):
     """
 
     @staticmethod
-    def forward(ctx, k, device):
+    def forward(ctx, k):
         """
         In the forward pass we receive a Tensor containing the input and return
         a Tensor containing the output. ctx is a context object that can be used
@@ -20,13 +20,15 @@ class Logcmk(torch.autograd.Function):
         m = 100
         ctx.save_for_backward(k)
         k = k.double()
+        answer = (m / 2 - 1) * torch.log(k) - torch.log(scipy.special.ive(m / 2 - 1, k)).cuda() - k - (m / 2) * np.log(
+            2 * np.pi)
         # answer = (m / 2 - 1) * torch.log(k) - torch.log(scipy.special.ive(m / 2 - 1, k)).to(device) - k - (m / 2) * torch.tensor(np.log(2 * np.pi))
-        answer = (m / 2 - 1) * torch.log(k)
-        answer = answer - torch.log(torch.tensor(scipy.special.ive(m / 2 - 1, k)))
-        answer = answer - k - (m / 2) * torch.tensor(np.log(2 * np.pi))
+        # answer = (m / 2 - 1) * torch.log(k)
+        # answer = answer - torch.log(torch.tensor(scipy.special.ive(m / 2 - 1, k)))
+        # answer = answer - k - (m / 2) * torch.tensor(np.log(2 * np.pi))
         # answer = (m / 2 - 1) * torch.log(k) - torch.log(scipy.special.ive(m / 2 - 1, k)).to(device) - (m / 2) * np.log(2 * np.pi)
         answer = answer.float()
-        return answer.to(device)
+        return answer
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -73,7 +75,7 @@ def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
             for l in range(label_embeddings.shape[0]):
                 tar_vec_t = label_embeddings[l]
                 tar_vec_norm_t = torch.nn.functional.normalize(tar_vec_t, p=2, dim=-1)
-                n_log_vmf = - logcmk(kappa, device) + torch.log(1 + kappa) * (
+                n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
                         0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
                 # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
                 vmf = torch.exp(-n_log_vmf)
@@ -100,7 +102,7 @@ def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
             for l in range(label_embeddings.shape[0]):
                 tar_vec_t = label_embeddings[l]
                 tar_vec_norm_t = torch.nn.functional.normalize(tar_vec_t, p=2, dim=-1)
-                n_log_vmf = - logcmk(kappa, device) + torch.log(1 + kappa) * (
+                n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
                         0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
                 # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
                 vmf = torch.exp(-n_log_vmf)
