@@ -57,7 +57,7 @@ def train_word2vec(df, dataset_path):
 if __name__ == "__main__":
     import os
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    #os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     base_path = "/data4/dheeraj/coarse2fine/"
     # base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     dataset = "nyt"

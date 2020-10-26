@@ -14,7 +14,7 @@ import nltk
 import os
 import sys
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 
 def get_word_embedding(word):

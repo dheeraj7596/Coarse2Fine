@@ -6,7 +6,7 @@ import torch
 from classifier_seedwords import preprocess_df
 import numpy as np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 
 def get_zihan_bert_embeddings(embeddings, count, model, tokenizer, sentences):

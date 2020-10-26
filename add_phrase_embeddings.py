@@ -7,7 +7,7 @@ import numpy as np
 from nltk.corpus import stopwords
 import string
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 
 def get_phrase_bert_embeddings(embeddings, count, model, tokenizer, filtered_phrases, sentences):

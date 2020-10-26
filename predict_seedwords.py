@@ -12,7 +12,7 @@ import json
 import nltk
 import sys
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 
 def get_bert_embeddings(words):

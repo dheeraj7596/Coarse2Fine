@@ -9,7 +9,7 @@ from nltk.corpus import stopwords
 import string
 from add_phrase_embeddings import get_phrase_bert_embeddings
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 if __name__ == "__main__":
     # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
