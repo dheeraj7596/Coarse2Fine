@@ -29,7 +29,7 @@ class Logcmk(torch.autograd.Function):
         return answer.to(device)
 
     @staticmethod
-    def backward(ctx, grad_output, device):
+    def backward(ctx, grad_output):
         """
         In the backward pass we receive a Tensor containing the gradient of the loss
         with respect to the output, and we need to compute the gradient of the loss
@@ -39,7 +39,7 @@ class Logcmk(torch.autograd.Function):
         m = 100
         # x = -ratio(m/2, k)
         k = k.double()
-        x = -((scipy.special.ive(m / 2, k)) / (scipy.special.ive(m / 2 - 1, k))).to(device)
+        x = -((scipy.special.ive(m / 2, k)) / (scipy.special.ive(m / 2 - 1, k)))
         x = x.float()
 
         return grad_output * Variable(x)
