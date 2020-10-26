@@ -49,8 +49,8 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
 
     # For each epoch...
     for epoch_i in range(0, epochs):
-        print("")
-        print('======== Epoch {:} / {:} ========'.format(epoch_i + 1, epochs))
+        print("", flush=True)
+        print('======== Epoch {:} / {:} ========'.format(epoch_i + 1, epochs), flush=True)
         print('Training...')
 
         t0 = time.time()
@@ -65,7 +65,7 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
             # Progress update every 40 batches.
             if step % 40 == 0 and not step == 0:
                 elapsed = format_time(time.time() - t0)
-                print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
+                print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed), flush=True)
 
             b_input_ids = batch[0].to(device)
             b_input_mask = batch[1].to(device)
@@ -92,15 +92,15 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
 
         training_time = format_time(time.time() - t0)
 
-        print("")
-        print("  Average training loss: {0:.2f}".format(avg_train_loss))
-        print("  Training epcoh took: {:}".format(training_time))
+        print("", flush=True)
+        print("  Average training loss: {0:.2f}".format(avg_train_loss), flush=True)
+        print("  Training epcoh took: {:}".format(training_time), flush=True)
 
         # ========================================
         #               Validation
         # ========================================
-        print("")
-        print("Running Validation...")
+        print("", flush=True)
+        print("Running Validation...", flush=True)
 
         t0 = time.time()
         model.eval()
@@ -131,7 +131,7 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
 
         # Report the final accuracy for this validation run.
         avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
-        print("  Accuracy: {0:.2f}".format(avg_val_accuracy))
+        print("  Accuracy: {0:.2f}".format(avg_val_accuracy), flush=True)
 
         # Calculate the average loss over all of the batches.
         avg_val_loss = total_eval_loss / len(validation_dataloader)
@@ -139,8 +139,8 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
         # Measure how long the validation run took.
         validation_time = format_time(time.time() - t0)
 
-        print("  Validation Loss: {0:.2f}".format(avg_val_loss))
-        print("  Validation took: {:}".format(validation_time))
+        print("  Validation Loss: {0:.2f}".format(avg_val_loss), flush=True)
+        print("  Validation took: {:}".format(validation_time), flush=True)
 
         # Record all statistics from this epoch.
         training_stats.append(
@@ -154,10 +154,10 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
             }
         )
 
-    print("")
-    print("Training complete!")
+    print("", flush=True)
+    print("Training complete!", flush=True)
 
-    print("Total training took {:} (h:mm:ss)".format(format_time(time.time() - total_t0)))
+    print("Total training took {:} (h:mm:ss)".format(format_time(time.time() - total_t0)), flush=True)
     return model
 
 
@@ -241,7 +241,7 @@ def test(df_test, tokenizer, model, label_embeddings, device, index_to_label, is
         preds[i] = index_to_label[preds[i]]
 
     if isPrint:
-        print(classification_report(true, preds))
+        print(classification_report(true, preds), flush=True)
     return preds
 
 
@@ -272,7 +272,7 @@ if __name__ == "__main__":
     df_train, df_test = train_test_split(df, test_size=0.1, stratify=df["label"])
 
     # Tokenize all of the sentences and map the tokens to their word IDs.
-    print('Loading BERT tokenizer...')
+    print('Loading BERT tokenizer...', flush=True)
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
     label_set = set(df_train.label.values)
