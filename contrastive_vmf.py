@@ -69,8 +69,8 @@ def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
             kappa = out_vec_t.norm(p=2, dim=-1)  # *tar_vec_t.norm(p=2,dim=-1)
             out_vec_norm_t = torch.nn.functional.normalize(out_vec_t, p=2, dim=-1)
 
-            num = 0
-            den = 0
+            temp = []
+            left = 0
             logits_temp = []
             for l in range(label_embeddings.shape[0]):
                 tar_vec_t = label_embeddings[l]
@@ -78,16 +78,18 @@ def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
                 n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
                         0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
                 # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
-                vmf = torch.exp(-n_log_vmf)
                 if l == targ_t:
-                    num = vmf
+                    left = n_log_vmf
                 else:
-                    den += vmf
-                logits_temp.append(vmf)
-            loss += -torch.log(num / den)
+                    temp.append(n_log_vmf)
+                logits_temp.append(n_log_vmf)
+            right = torch.logsumexp(torch.tensor(temp).view(1, -1), dim=1)
+            print(left, right)
+            loss += (left - right)
             logits.append(logits_temp)
 
         loss = loss.div(batch_size)
+        print("Loss:", loss, flush=True)
         logits = torch.tensor(logits).to(device)
     else:
         for i, out_t in enumerate(outputs):
@@ -105,8 +107,7 @@ def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
                 n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
                         0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
                 # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
-                vmf = torch.exp(-n_log_vmf)
-                logits_temp.append(vmf)
+                logits_temp.append(n_log_vmf)
             logits.append(logits_temp)
 
         logits = torch.tensor(logits).to(device)
@@ -118,4 +119,4 @@ if __name__ == "__main__":
     label_embeddings = [np.random.randn(32), np.random.randn(32), np.random.randn(32)]
     label_embeddings = torch.tensor(np.array(label_embeddings))
     targets = [0, 2, 1, 1, 0]
-    t = contrastiveNLLvMF(outputs, None, label_embeddings, device=torch.device("cpu"))
+    t = contrastiveNLLvMF(outputs, targets, label_embeddings, device=torch.device("cpu"))
