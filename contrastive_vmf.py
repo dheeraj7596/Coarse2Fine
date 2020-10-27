@@ -81,14 +81,14 @@ def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
                 if l == targ_t:
                     left = n_log_vmf
                 else:
-                    temp.append(n_log_vmf)
-                logits_temp.append(n_log_vmf)
-            right = torch.logsumexp(torch.tensor(temp).view(1, -1), dim=1)
+                    temp.append(-n_log_vmf)
+                logits_temp.append(-n_log_vmf)
+            right = torch.logsumexp(torch.tensor(temp).to(device).view(1, -1), dim=1).to(device)
             print(left, right, flush=True)
-            loss += (left - right)
+            loss += (left + right)
             logits.append(logits_temp)
 
-        loss = loss.div(batch_size)
+        loss = loss.div(batch_size).to(device)
         print("Loss:", loss, flush=True)
         logits = torch.tensor(logits).to(device)
     else:
@@ -107,7 +107,7 @@ def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
                 n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
                         0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
                 # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
-                logits_temp.append(n_log_vmf)
+                logits_temp.append(-n_log_vmf)
             logits.append(logits_temp)
 
         logits = torch.tensor(logits).to(device)
