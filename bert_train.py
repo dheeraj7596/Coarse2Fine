@@ -12,6 +12,8 @@ import random
 import datetime
 import os
 from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
+
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 
@@ -184,7 +186,8 @@ def train(train_dataloader, validation_dataloader, device, num_labels):
                 elapsed = format_time(time.time() - t0)
 
                 # Report progress.
-                print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed), flush=True)
+                print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed),
+                      flush=True)
 
             # Unpack this training batch from our dataloader.
             #
@@ -379,7 +382,7 @@ def evaluate(model, prediction_dataloader, device):
     return predictions, true_labels
 
 
-def test(df_test_original, label_to_index):
+def test(df_test_original, label_to_index, index_to_label):
     input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_test_original, label_to_index)
     # Set the batch size.
     batch_size = 32
@@ -394,6 +397,11 @@ def test(df_test_original, label_to_index):
     true = []
     for t in true_labels:
         true = true + list(t)
+
+    for i, t in enumerate(true):
+        true[i] = index_to_label[t]
+        preds[i] = index_to_label[preds[i]]
+
     print(classification_report(true, preds), flush=True)
 
 
@@ -409,10 +417,12 @@ if __name__ == "__main__":
     os.makedirs(model_path, exist_ok=True)
 
     use_gpu = int(sys.argv[1])
+    gpu_id = int(sys.argv[2])
     # use_gpu = False
 
-    df_train = pickle.load(open(pkl_dump_dir + "df_coarse.pkl", "rb"))
-    df_train = preprocess_df(df_train)
+    df = pickle.load(open(pkl_dump_dir + "df_coarse.pkl", "rb"))
+    df_train, df_test = train_test_split(df, test_size=0.1, random_state=42)
+    # df_train = preprocess_df(df_train)
 
     # Tokenize all of the sentences and map the tokens to their word IDs.
     print('Loading BERT tokenizer...', flush=True)
@@ -420,8 +430,10 @@ if __name__ == "__main__":
 
     label_set = set(df_train.label.values)
     label_to_index = {}
+    index_to_label = {}
     for i, l in enumerate(list(label_set)):
         label_to_index[l] = i
+        index_to_label[i] = l
 
     input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_train, label_to_index)
 
@@ -433,10 +445,9 @@ if __name__ == "__main__":
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
-        device = torch.device("cuda")
+        device = torch.device('cuda:' + str(gpu_id))
     else:
         device = torch.device("cpu")
 
     model = train(train_dataloader, validation_dataloader, device, num_labels=len(label_to_index))
-    tokenizer.save_pretrained(tok_path)
-    model.save_pretrained(model_path)
+    test(df_test, label_to_index, index_to_label)
