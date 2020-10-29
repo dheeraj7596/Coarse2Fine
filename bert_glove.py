@@ -28,7 +28,7 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
                       lr=2e-5,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8.
                       )
-    epochs = 10
+    epochs = 5
     total_steps = len(train_dataloader) * epochs
 
     scheduler = get_linear_schedule_with_warmup(optimizer,
@@ -65,7 +65,8 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
             # Progress update every 40 batches.
             if step % 40 == 0 and not step == 0:
                 elapsed = format_time(time.time() - t0)
-                print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed), flush=True)
+                print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed),
+                      flush=True)
 
             b_input_ids = batch[0].to(device)
             b_input_mask = batch[1].to(device)
@@ -254,7 +255,7 @@ if __name__ == "__main__":
     glove_dir = "/data4/dheeraj/metaguide/glove.6B"
 
     tok_path = pkl_dump_dir + "bert/tokenizer"
-    model_path = pkl_dump_dir + "bert/model"
+    model_path = pkl_dump_dir + "bert/model/"
     os.makedirs(tok_path, exist_ok=True)
     os.makedirs(model_path, exist_ok=True)
 
@@ -269,7 +270,7 @@ if __name__ == "__main__":
         device = torch.device("cpu")
 
     df = pickle.load(open(pkl_dump_dir + "df_coarse.pkl", "rb"))
-    df_train, df_test = train_test_split(df, test_size=0.1, stratify=df["label"])
+    df_train, df_test = train_test_split(df, test_size=0.1, stratify=df["label"], random_state=42)
 
     # Tokenize all of the sentences and map the tokens to their word IDs.
     print('Loading BERT tokenizer...', flush=True)
@@ -298,5 +299,5 @@ if __name__ == "__main__":
     model = train(train_dataloader, validation_dataloader, model, label_embeddings, device)
     test(df_test, tokenizer, model, label_embeddings, device, index_to_label)
 
-    tokenizer.save_pretrained(tok_path)
-    model.save_pretrained(model_path)
+    # tokenizer.save_pretrained(tok_path)
+    # torch.save(model, model_path + "bert_vmf.pt")

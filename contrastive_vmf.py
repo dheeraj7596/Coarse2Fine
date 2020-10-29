@@ -84,7 +84,6 @@ def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
                     temp.append(-n_log_vmf)
                 logits_temp.append(-n_log_vmf)
             right = torch.logsumexp(torch.tensor(temp).to(device).view(1, -1), dim=1).to(device)
-            print(left, right, flush=True)
             loss += (left + right)
             logits.append(logits_temp)
 
