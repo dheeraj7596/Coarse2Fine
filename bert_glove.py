@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import json
 import torch
 from torch.utils.data import TensorDataset, DataLoader, SequentialSampler
 from transformers import BertTokenizer, AdamW, get_linear_schedule_with_warmup
@@ -162,7 +163,7 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
     return model
 
 
-def create_label_embeddings(glove_dir, index_to_label, device):
+def create_label_embeddings(glove_dir, index_to_label, device, label_word_map=None):
     embeddings = {}
     with open(os.path.join(glove_dir, 'glove.6B.100d.txt'), encoding='utf-8') as file:
         for line in file:
@@ -174,8 +175,12 @@ def create_label_embeddings(glove_dir, index_to_label, device):
             embeddings[word] = coefs
 
     label_embeddings = []
-    for i in index_to_label:
-        label_embeddings.append(embeddings[index_to_label[i]])
+    if label_word_map is None:
+        for i in index_to_label:
+            label_embeddings.append(embeddings[index_to_label[i]])
+    else:
+        for i in index_to_label:
+            label_embeddings.append(embeddings[label_word_map[index_to_label[i]]])
 
     label_embeddings = torch.tensor(label_embeddings).to(device)
     return label_embeddings
@@ -269,7 +274,7 @@ if __name__ == "__main__":
     else:
         device = torch.device("cpu")
 
-    df = pickle.load(open(pkl_dump_dir + "df_coarse.pkl", "rb"))
+    df = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
     df_train, df_test = train_test_split(df, test_size=0.1, stratify=df["label"], random_state=42)
 
     # Tokenize all of the sentences and map the tokens to their word IDs.
@@ -283,7 +288,8 @@ if __name__ == "__main__":
         label_to_index[l] = i
         index_to_label[i] = l
 
-    label_embeddings = create_label_embeddings(glove_dir, index_to_label, device)
+    label_word_map = json.load(open(pkl_dump_dir + "label_word_map.json", "r"))
+    label_embeddings = create_label_embeddings(glove_dir, index_to_label, device, label_word_map)
 
     input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_train, label_to_index)
 
