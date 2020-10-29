@@ -111,6 +111,7 @@ def train(train_dataloader, validation_dataloader, device, num_labels):
         output_attentions=False,  # Whether the model returns attentions weights.
         output_hidden_states=False,  # Whether the model returns all hidden-states.
     )
+    model.to(device)
 
     # Note: AdamW is a class from the huggingface library (as opposed to pytorch)
     # I believe the 'W' stands for 'Weight Decay fix"
@@ -448,5 +449,4 @@ if __name__ == "__main__":
         device = torch.device("cpu")
 
     model = train(train_dataloader, validation_dataloader, device, num_labels=len(label_to_index))
-    model.to(device)
     test(df_test, label_to_index, index_to_label)
