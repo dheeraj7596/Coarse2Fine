@@ -180,7 +180,11 @@ def create_label_embeddings(glove_dir, index_to_label, device, label_word_map=No
             label_embeddings.append(embeddings[index_to_label[i]])
     else:
         for i in index_to_label:
-            label_embeddings.append(embeddings[label_word_map[index_to_label[i]]])
+            words = label_word_map[index_to_label[i]].split(",")
+            temp_vec = 0
+            for t in words:
+                temp_vec += embeddings[t.strip()]
+            label_embeddings.append(temp_vec / len(words))
 
     label_embeddings = torch.tensor(label_embeddings).to(device)
     return label_embeddings

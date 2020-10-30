@@ -13,6 +13,7 @@ import datetime
 import os
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
+import copy
 
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "5"
@@ -41,7 +42,7 @@ def bert_tokenize(tokenizer, df, label_to_index):
     attention_masks = []
     # For every sentence...
     sentences = df.text.values
-    labels = df.label.values
+    labels = copy.deepcopy(df.label.values)
     for i, l in enumerate(list(labels)):
         labels[i] = label_to_index[l]
     labels = np.array(labels, dtype='int32')
