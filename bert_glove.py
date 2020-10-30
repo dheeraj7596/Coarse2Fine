@@ -9,6 +9,8 @@ from bert_train import bert_tokenize, create_data_loaders
 from bert_class import BERTClass
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
+from util import plot_confusion_mat
+import matplotlib.pyplot as plt
 
 
 # Function to calculate the accuracy of our predictions vs labels
@@ -307,7 +309,10 @@ if __name__ == "__main__":
     model.to(device)
 
     model = train(train_dataloader, validation_dataloader, model, label_embeddings, device)
-    test(df_test, tokenizer, model, label_embeddings, device, index_to_label)
+    preds = test(df_test, tokenizer, model, label_embeddings, device, index_to_label)
+    plot_confusion_mat(df_test["label"], preds, label_set)
+    plt.savefig("./conf_mat.png")
+    preds = test(df_train, tokenizer, model, label_embeddings, device, index_to_label)
 
     # tokenizer.save_pretrained(tok_path)
     # torch.save(model, model_path + "bert_vmf.pt")
