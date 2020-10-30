@@ -31,7 +31,7 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
                       lr=2e-5,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8.
                       )
-    epochs = 5
+    epochs = 10
     total_steps = len(train_dataloader) * epochs
 
     scheduler = get_linear_schedule_with_warmup(optimizer,
