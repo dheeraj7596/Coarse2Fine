@@ -310,7 +310,7 @@ if __name__ == "__main__":
 
     model = train(train_dataloader, validation_dataloader, model, label_embeddings, device)
     preds = test(df_test, tokenizer, model, label_embeddings, device, index_to_label)
-    plot_confusion_mat(df_test["label"], preds, label_set)
+    plot_confusion_mat(df_test["label"], preds, list(label_set))
     plt.savefig("./conf_mat.png")
     preds = test(df_train, tokenizer, model, label_embeddings, device, index_to_label)
 
