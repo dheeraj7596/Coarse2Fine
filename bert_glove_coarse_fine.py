@@ -74,16 +74,17 @@ if __name__ == "__main__":
 
     model = train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs=5,
                   parent_child=parent_child)
-    true, preds = test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label,
-                       parent_child)
-    print(classification_report(true, preds), flush=True)
-
-    plot_confusion_mat(df_test["label"], preds, list(label_set))
-    plt.savefig("./conf_mat.png")
 
     temp_parent_child = {}
     for p in parent_child:
         temp_parent_child[p] = p
+
+    true, preds = test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label,
+                       temp_parent_child)
+    print(classification_report(true, preds), flush=True)
+
+    plot_confusion_mat(df_test["label"], preds, list(label_set))
+    plt.savefig("./conf_mat.png")
 
     true, preds = test(df_train, tokenizer, model, label_embeddings, device, label_to_index, index_to_label,
                        temp_parent_child)
