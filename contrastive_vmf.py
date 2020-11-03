@@ -49,6 +49,8 @@ class Logcmk(torch.autograd.Function):
 
 def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
     """
+        Training: Flat training
+        Prediction: Flat prediction
     :param outputs: BERT 100 dim vectors
     :param targets: label indices
     :param label_embeddings: tensor with label embeddings at their corresponding label indices
@@ -115,6 +117,8 @@ def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
 
 def contrastiveNLLvMFCoarseFine(outputs, targets, label_embeddings, device, parent_child):
     """
+        Training: Trains over coarse-grained labels contrasted over other coarse-grained labels and their fine-grained labels.
+        prediction: Predicts over all child labels.
     :param outputs: BERT 100 dim vectors
     :param targets: label indices
     :param label_embeddings: tensor with label embeddings at their corresponding label indices

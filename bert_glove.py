@@ -26,7 +26,7 @@ def format_time(elapsed):
     return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
-def train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs):
+def train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs, parent_child=None):
     optimizer = AdamW(model.parameters(),
                       lr=2e-5,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8.
@@ -80,7 +80,8 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
                                  token_type_ids=None,
                                  attention_mask=b_input_mask,
                                  labels=b_labels,
-                                 device=device)
+                                 device=device,
+                                 parent_child=parent_child)
 
             total_train_loss += loss.item()
             loss.backward()
@@ -123,7 +124,8 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
                                      token_type_ids=None,
                                      attention_mask=b_input_mask,
                                      labels=b_labels,
-                                     device=device)
+                                     device=device,
+                                     parent_child=parent_child)
 
             total_eval_loss += loss.item()
 
@@ -191,7 +193,7 @@ def create_label_embeddings(glove_dir, index_to_label, device, label_word_map=No
     return label_embeddings
 
 
-def evaluate(model, prediction_dataloader, label_embeddings, device):
+def evaluate(model, prediction_dataloader, label_embeddings, device, parent_child=None):
     # Prediction on test set
     # Put model in evaluation mode
     model.eval()
@@ -216,7 +218,8 @@ def evaluate(model, prediction_dataloader, label_embeddings, device):
                                  token_type_ids=None,
                                  attention_mask=b_input_mask,
                                  labels=None,
-                                 device=device)
+                                 device=device,
+                                 parent_child=parent_child)
 
         # Move logits and labels to CPU
         logits = logits.detach().cpu().numpy()
@@ -229,7 +232,7 @@ def evaluate(model, prediction_dataloader, label_embeddings, device):
     return predictions, true_labels
 
 
-def test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label, isPrint=True):
+def test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label, parent_child=None):
     input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_test, label_to_index)
     # Set the batch size.
     batch_size = 16
@@ -237,7 +240,7 @@ def test(df_test, tokenizer, model, label_embeddings, device, label_to_index, in
     prediction_data = TensorDataset(input_ids, attention_masks, labels)
     prediction_sampler = SequentialSampler(prediction_data)
     prediction_dataloader = DataLoader(prediction_data, sampler=prediction_sampler, batch_size=batch_size)
-    predictions, true_labels = evaluate(model, prediction_dataloader, label_embeddings, device)
+    predictions, true_labels = evaluate(model, prediction_dataloader, label_embeddings, device, parent_child)
     preds = []
     for pred in predictions:
         preds = preds + list(pred.argmax(axis=-1))
@@ -251,9 +254,7 @@ def test(df_test, tokenizer, model, label_embeddings, device, label_to_index, in
         true[i] = index_to_label[t]
         preds[i] = index_to_label[preds[i]]
 
-    if isPrint:
-        print(classification_report(true, preds), flush=True)
-    return preds
+    return true, preds
 
 
 if __name__ == "__main__":
@@ -310,10 +311,15 @@ if __name__ == "__main__":
     model.to(device)
 
     model = train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs=5)
-    preds = test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label)
+
+    true, preds = test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label)
+    print(classification_report(true, preds), flush=True)
+
     plot_confusion_mat(df_test["label"], preds, list(label_set))
     plt.savefig("./conf_mat.png")
-    preds = test(df_train, tokenizer, model, label_embeddings, device, label_to_index, index_to_label)
+
+    true, preds = test(df_train, tokenizer, model, label_embeddings, device, label_to_index, index_to_label)
+    print(classification_report(true, preds), flush=True)
 
     tokenizer.save_pretrained(tok_path)
     torch.save(model, model_path + model_name)
