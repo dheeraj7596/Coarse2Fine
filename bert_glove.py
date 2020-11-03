@@ -265,8 +265,10 @@ if __name__ == "__main__":
     # glove_dir = "/Users/dheerajmekala/Work/metaguide/data/glove.6B"
     glove_dir = "/data4/dheeraj/metaguide/glove.6B"
 
-    tok_path = pkl_dump_dir + "bert/tokenizer"
+    tok_path = pkl_dump_dir + "bert/tokenizer_coarse"
     model_path = pkl_dump_dir + "bert/model/"
+    model_name = "bert_vmf_coarse.pt"
+
     os.makedirs(tok_path, exist_ok=True)
     os.makedirs(model_path, exist_ok=True)
 
@@ -280,7 +282,7 @@ if __name__ == "__main__":
     else:
         device = torch.device("cpu")
 
-    df = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
+    df = pickle.load(open(pkl_dump_dir + "df_coarse.pkl", "rb"))
     df_train, df_test = train_test_split(df, test_size=0.1, stratify=df["label"], random_state=42)
 
     # Tokenize all of the sentences and map the tokens to their word IDs.
@@ -294,8 +296,8 @@ if __name__ == "__main__":
         label_to_index[l] = i
         index_to_label[i] = l
 
-    label_word_map = json.load(open(pkl_dump_dir + "label_word_map.json", "r"))
-    label_embeddings = create_label_embeddings(glove_dir, index_to_label, device, label_word_map)
+    # label_word_map = json.load(open(pkl_dump_dir + "label_word_map.json", "r"))
+    label_embeddings = create_label_embeddings(glove_dir, index_to_label, device)
 
     input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_train, label_to_index)
 
@@ -314,5 +316,5 @@ if __name__ == "__main__":
     plt.savefig("./conf_mat.png")
     preds = test(df_train, tokenizer, model, label_embeddings, device, index_to_label)
 
-    # tokenizer.save_pretrained(tok_path)
-    # torch.save(model, model_path + "bert_vmf.pt")
+    tokenizer.save_pretrained(tok_path)
+    torch.save(model, model_path + model_name)
