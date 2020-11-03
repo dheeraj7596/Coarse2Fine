@@ -323,6 +323,7 @@ if __name__ == "__main__":
     model.to(device)
 
     model = train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs=5)
+    model = model.to(device)
 
     true, preds = test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label)
     print(classification_report(true, preds), flush=True)
