@@ -26,12 +26,11 @@ def format_time(elapsed):
     return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
-def train(train_dataloader, validation_dataloader, model, label_embeddings, device):
+def train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs):
     optimizer = AdamW(model.parameters(),
                       lr=2e-5,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8.
                       )
-    epochs = 10
     total_steps = len(train_dataloader) * epochs
 
     scheduler = get_linear_schedule_with_warmup(optimizer,
@@ -310,7 +309,7 @@ if __name__ == "__main__":
     model = BERTClass()
     model.to(device)
 
-    model = train(train_dataloader, validation_dataloader, model, label_embeddings, device)
+    model = train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs=5)
     preds = test(df_test, tokenizer, model, label_embeddings, device, index_to_label)
     plot_confusion_mat(df_test["label"], preds, list(label_set))
     plt.savefig("./conf_mat.png")
