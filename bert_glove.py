@@ -229,7 +229,7 @@ def evaluate(model, prediction_dataloader, label_embeddings, device):
     return predictions, true_labels
 
 
-def test(df_test, tokenizer, model, label_embeddings, device, index_to_label, isPrint=True):
+def test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label, isPrint=True):
     input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_test, label_to_index)
     # Set the batch size.
     batch_size = 16
@@ -310,10 +310,10 @@ if __name__ == "__main__":
     model.to(device)
 
     model = train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs=5)
-    preds = test(df_test, tokenizer, model, label_embeddings, device, index_to_label)
+    preds = test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label)
     plot_confusion_mat(df_test["label"], preds, list(label_set))
     plt.savefig("./conf_mat.png")
-    preds = test(df_train, tokenizer, model, label_embeddings, device, index_to_label)
+    preds = test(df_train, tokenizer, model, label_embeddings, device, label_to_index, index_to_label)
 
     tokenizer.save_pretrained(tok_path)
     torch.save(model, model_path + model_name)

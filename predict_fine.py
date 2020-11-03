@@ -40,4 +40,4 @@ if __name__ == "__main__":
     label_word_map = json.load(open(pkl_dump_dir + "label_word_map.json", "r"))
     label_embeddings = create_label_embeddings(glove_dir, index_to_label, device, label_word_map)
 
-    preds = test(df, tokenizer, model, label_embeddings, device, index_to_label)
+    preds = test(df, tokenizer, model, label_embeddings, device, label_to_index, index_to_label)
