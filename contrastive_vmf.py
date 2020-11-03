@@ -113,6 +113,81 @@ def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
     return loss, logits
 
 
+def contrastiveNLLvMFCoarseFine(outputs, targets, label_embeddings, device, parent_child):
+    """
+    :param outputs: BERT 100 dim vectors
+    :param targets: label indices
+    :param label_embeddings: tensor with label embeddings at their corresponding label indices
+    :param device: device
+    :param parent_child: coarse-fine mapping of labels with label-indices as keys and values
+    :return: loss, logits
+    """
+    loss = 0
+    logits = []
+    batch_size = outputs.size(0)
+    logcmk = Logcmk.apply
+
+    if targets is not None:
+        for i, (out_t, targ_t) in enumerate(zip(outputs, targets)):
+            # out_t -> dim
+            # targ_t -> label_index
+
+            out_vec_t = out_t
+            kappa = out_vec_t.norm(p=2, dim=-1)  # *tar_vec_t.norm(p=2,dim=-1)
+            out_vec_norm_t = torch.nn.functional.normalize(out_vec_t, p=2, dim=-1)
+
+            temp = []
+            left = 0
+            logits_temp = []
+
+            loopy_var = list(set(range(label_embeddings.shape[0])) - set(parent_child[targ_t]))
+            for l in loopy_var:
+                tar_vec_t = label_embeddings[l]
+                tar_vec_norm_t = torch.nn.functional.normalize(tar_vec_t, p=2, dim=-1)
+                n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
+                        0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
+                # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
+                if l == targ_t:
+                    left = n_log_vmf
+                else:
+                    temp.append(-n_log_vmf)
+                logits_temp.append(-n_log_vmf)
+            right = torch.logsumexp(torch.tensor(temp).to(device).view(1, -1), dim=1).to(device)
+            loss += (left + right)
+            logits.append(logits_temp)
+
+        loss = loss.div(batch_size).to(device)
+        print("Loss:", loss, flush=True)
+        logits = torch.tensor(logits).to(device)
+    else:
+        for i, out_t in enumerate(outputs):
+            # out_t -> dim
+            # targ_t -> label_index
+
+            out_vec_t = out_t
+            kappa = out_vec_t.norm(p=2, dim=-1)  # *tar_vec_t.norm(p=2,dim=-1)
+            out_vec_norm_t = torch.nn.functional.normalize(out_vec_t, p=2, dim=-1)
+
+            logits_temp = []
+
+            loopy_var = []
+            for p in parent_child:
+                for ch in parent_child[p]:
+                    loopy_var.append(ch)
+
+            for l in loopy_var:
+                tar_vec_t = label_embeddings[l]
+                tar_vec_norm_t = torch.nn.functional.normalize(tar_vec_t, p=2, dim=-1)
+                n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
+                        0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
+                # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
+                logits_temp.append(-n_log_vmf)
+            logits.append(logits_temp)
+
+        logits = torch.tensor(logits).to(device)
+    return loss, logits
+
+
 if __name__ == "__main__":
     outputs = torch.randn(5, 32)
     label_embeddings = [np.random.randn(32), np.random.randn(32), np.random.randn(32)]
