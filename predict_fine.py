@@ -27,22 +27,23 @@ if __name__ == "__main__":
     else:
         device = torch.device("cpu")
 
+    parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
+    parent_labels = list(parent_to_child.keys())
+
     df = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
     label_set = set(df.label.values)
     label_to_index = {}
     index_to_label = {}
-    for i, l in enumerate(list(label_set)):
+    for i, l in enumerate(list(label_set) + parent_labels):
         label_to_index[l] = i
         index_to_label[i] = l
 
     tokenizer = BertTokenizer.from_pretrained(tok_path, do_lower_case=True)
     model = torch.load(model_path + model_name)
 
-    label_word_map = json.load(open(pkl_dump_dir + "label_word_map.json", "r"))
-    parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
+    label_word_map = json.load(open(pkl_dump_dir + "label_word_map_coarse_fine.json", "r"))
     label_embeddings = create_label_embeddings(glove_dir, index_to_label, device, label_word_map)
 
-    parent_labels = list(parent_to_child.keys())
     true = []
     preds = []
     for p in parent_labels:

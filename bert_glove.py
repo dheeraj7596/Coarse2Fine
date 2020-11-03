@@ -241,9 +241,21 @@ def test(df_test, tokenizer, model, label_embeddings, device, label_to_index, in
     prediction_sampler = SequentialSampler(prediction_data)
     prediction_dataloader = DataLoader(prediction_data, sampler=prediction_sampler, batch_size=batch_size)
     predictions, true_labels = evaluate(model, prediction_dataloader, label_embeddings, device, parent_child)
+
+    possible_labels = []
+    if parent_child is not None:
+        for p in parent_child:
+            possible_labels += parent_child[p]
+
     preds = []
     for pred in predictions:
-        preds = preds + list(pred.argmax(axis=-1))
+        if parent_child is None:
+            preds = preds + list(pred.argmax(axis=-1))
+        else:
+            temp_list = pred.argmax(axis=-1)
+            for index in temp_list:
+                preds.append(possible_labels[index])
+
     true = []
     for t in true_labels:
         true = true + list(t)
