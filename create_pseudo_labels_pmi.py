@@ -1,6 +1,6 @@
 import pickle
 from util import fit_get_tokenizer
-from get_skip_grams import encode_phrase
+from count_based_conditional_prob_stem import encode_into_phrase
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 import math
@@ -26,9 +26,7 @@ def generate_pseudo_labels_pmi(df, labels, tokenizer, probability, phrase_id):
         mod_labels = []
         for l in labels:
             lns.append(0)
-            label_str = encode_phrase(" ".join([stemmer.stem(t) for t in l.split("_") if
-                                                stemmer.stem(t) not in stop_words and t not in stop_words]).strip(),
-                                      phrase_id)
+            label_str = encode_into_phrase(l, phrase_id)
             mod_labels.append(label_str)
         for i, row in df.iterrows():
             line = row["text"]
@@ -87,8 +85,8 @@ if __name__ == "__main__":
     probability = pickle.load(open(data_path + "label_pmi_map.pkl", "rb"))
 
     df = pickle.load(open(data_path + "df_fine_phrase_stem.pkl", "rb"))
-    phrase_id = pickle.load(open(data_path + "phrase_id_coarse_stem_map.pkl", "rb"))
-    id_phrase_map = pickle.load(open(data_path + "id_phrase_coarse_stem_map.pkl", "rb"))
+    phrase_id = pickle.load(open(data_path + "phrase_id_coarse_map.pkl", "rb"))
+    id_phrase_map = pickle.load(open(data_path + "id_phrase_coarse_map.pkl", "rb"))
 
     child_to_parent = pickle.load(open(data_path + "child_to_parent.pkl", "rb"))
     parent_to_child = pickle.load(open(data_path + "parent_to_child.pkl", "rb"))

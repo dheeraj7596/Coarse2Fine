@@ -114,6 +114,19 @@ def get_pmi_words(texts, label_str, tokenizer, mode="doc", min_coc_threshold=5, 
     return prob
 
 
+def encode_into_phrase(word, phrase_id):
+    stemmer = SnowballStemmer("english")
+    stop_words = set(stopwords.words('english'))
+    stop_words.add('would')
+    temp = encode_phrase(word, phrase_id)
+    if temp == word:
+        temp2 = " ".join([stemmer.stem(t) for t in word.split("_") if
+                          stemmer.stem(t) not in stop_words and t not in stop_words]).strip()
+        return encode_phrase(temp2, phrase_id)
+    else:
+        return temp
+
+
 if __name__ == "__main__":
     base_path = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     # base_path = "/data4/dheeraj/coarse2fine/"
@@ -122,10 +135,9 @@ if __name__ == "__main__":
     func = "pmi"
     assert func in ["pmi", "cond_prob"]  # this could be either pmi or cond_prob
 
-    stemmer = SnowballStemmer("english")
-    df = pickle.load(open(data_path + "df_coarse_stem_phrase.pkl", "rb"))
-    phrase_id = pickle.load(open(data_path + "phrase_id_coarse_stem_map.pkl", "rb"))
-    id_phrase_map = pickle.load(open(data_path + "id_phrase_coarse_stem_map.pkl", "rb"))
+    df = pickle.load(open(data_path + "df_coarse_phrase_stem.pkl", "rb"))
+    phrase_id = pickle.load(open(data_path + "phrase_id_coarse_map.pkl", "rb"))
+    id_phrase_map = pickle.load(open(data_path + "id_phrase_coarse_map.pkl", "rb"))
     df = preprocess_df(df)
     tokenizer = fit_get_tokenizer(df.text, max_words=150000)
     # child_to_parent = pickle.load(open(data_path + "child_to_parent.pkl", "rb"))
@@ -136,8 +148,6 @@ if __name__ == "__main__":
     # parent_to_child["business"] = ["stocks", "energy", "economy", "euro"]
     # parent_to_child["politics"] = ["budget", "medicaid", "judge", "gay", "weapons", "surveillance", "immigration", "military", "abortion"]
 
-    stop_words = set(stopwords.words('english'))
-    stop_words.add('would')
     words = {}
     threshold = {}
     probability = {}
@@ -146,13 +156,12 @@ if __name__ == "__main__":
         tokenizer = fit_get_tokenizer(temp_df.text, max_words=150000)
         for ch in parent_to_child[p]:
             words[ch] = {}
-            child_label_str = encode_phrase(" ".join([stemmer.stem(t) for t in ch.split("_") if stemmer.stem(
-                t) not in stop_words and t not in stop_words]).strip(), phrase_id)
+            child_label_str = encode_into_phrase(ch, phrase_id)
             if func == "cond_prob":
-                thresh = get_conditional_probability(temp_df.text, child_label_str, encode_phrase(p, phrase_id))
+                thresh = get_conditional_probability(temp_df.text, child_label_str, encode_into_phrase(p, phrase_id))
                 prob = get_conditional_probability_words(temp_df.text, child_label_str, tokenizer)
             elif func == "pmi":
-                thresh = get_pmi(temp_df.text, child_label_str, encode_phrase(stemmer.stem(p), phrase_id))
+                thresh = get_pmi(temp_df.text, child_label_str, encode_into_phrase(p, phrase_id))
                 prob = get_pmi_words(temp_df.text, child_label_str, tokenizer)
                 if thresh < 0:
                     thresh = 0
@@ -167,9 +176,7 @@ if __name__ == "__main__":
     for p in parent_labels:
         temp_df = df[df.label.isin([p])].reset_index(drop=True)
         tokenizer = fit_get_tokenizer(temp_df.text, max_words=150000)
-        parent_label_str = encode_phrase(" ".join([stemmer.stem(t) for t in p.split("_") if
-                                                   stemmer.stem(t) not in stop_words and t not in stop_words]).strip(),
-                                         phrase_id)
+        parent_label_str = encode_into_phrase(p, phrase_id)
 
         if func == "cond_prob":
             prob = get_conditional_probability_words(temp_df.text, parent_label_str, tokenizer)
@@ -185,7 +192,7 @@ if __name__ == "__main__":
             cousins = set(words.keys()) - set(parent_to_child[p])
             removed_words = []
             for word in words[ch]:
-                encoded_word = encode_phrase(word, phrase_id)
+                encoded_word = encode_into_phrase(word, phrase_id)
                 flag = 0
                 for sb in siblings:
                     try:
