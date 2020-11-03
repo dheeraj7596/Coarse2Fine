@@ -40,6 +40,7 @@ if __name__ == "__main__":
 
     tokenizer = BertTokenizer.from_pretrained(tok_path, do_lower_case=True)
     model = torch.load(model_path + model_name)
+    model.to(device)
 
     label_word_map = json.load(open(pkl_dump_dir + "label_word_map_coarse_fine.json", "r"))
     label_embeddings = create_label_embeddings(glove_dir, index_to_label, device, label_word_map)
