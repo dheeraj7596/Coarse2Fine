@@ -50,9 +50,12 @@ if __name__ == "__main__":
     for p in parent_labels:
         children = parent_to_child[p]
         temp_df = df[df.label.isin(children)].reset_index(drop=True)
-        temp_parent_child = {label_to_index[p]: [label_to_index[ch] for ch in children]}
+        add_args = {}
+        add_args["possible_labels"] = [label_to_index[ch] for ch in children]
+        add_args["contrastive_map"] = None
+
         temp_true, temp_preds = test(temp_df, tokenizer, model, label_embeddings, device, label_to_index,
-                                     index_to_label, temp_parent_child)
+                                     index_to_label, add_args)
         true += temp_true
         preds += temp_preds
 
