@@ -48,9 +48,11 @@ if __name__ == "__main__":
     label_set = set(df_train.label.values).union(set(df_fine.label.values))
     label_to_index = {}
     index_to_label = {}
+    distinct_coarse_label_inds = []
     for i, l in enumerate(list(label_set)):
         label_to_index[l] = i
         index_to_label[i] = l
+        distinct_coarse_label_inds.append(i)
 
     parent_child = {}
     for p in parent_to_child:
@@ -72,22 +74,28 @@ if __name__ == "__main__":
     model = BERTClass()
     model.to(device)
 
+    add_args = {}
+    add_args["possible_labels"] = distinct_coarse_label_inds
+    contrastive_map = {}
+    for ind in distinct_coarse_label_inds:
+        temp_list = []
+        sib_coarse = list(set(distinct_coarse_label_inds) - {ind})
+        for sib in sib_coarse:
+            temp_list.append(sib)
+            temp_list += parent_child[sib]
+        contrastive_map[ind] = temp_list
+    add_args["contrastive_map"] = contrastive_map
+
     model = train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs=5,
-                  parent_child=parent_child)
+                  additional_args=add_args)
 
-    temp_parent_child = {}
-    for p in parent_child:
-        temp_parent_child[p] = p
-
-    true, preds = test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label,
-                       temp_parent_child)
+    true, preds = test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label, add_args)
     print(classification_report(true, preds), flush=True)
 
     plot_confusion_mat(df_test["label"], preds, list(label_set))
     plt.savefig("./conf_mat.png")
 
-    true, preds = test(df_train, tokenizer, model, label_embeddings, device, label_to_index, index_to_label,
-                       temp_parent_child)
+    true, preds = test(df_train, tokenizer, model, label_embeddings, device, label_to_index, index_to_label, add_args)
     print(classification_report(true, preds), flush=True)
 
     tokenizer.save_pretrained(tok_path)
