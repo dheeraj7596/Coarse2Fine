@@ -47,75 +47,75 @@ class Logcmk(torch.autograd.Function):
         return grad_output * Variable(x)
 
 
-def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
-    """
-        Training: Flat training
-        Prediction: Flat prediction
-    :param outputs: BERT 100 dim vectors
-    :param targets: label indices
-    :param label_embeddings: tensor with label embeddings at their corresponding label indices
-    :param device: device
-    :return: loss, logits
-    """
-    loss = 0
-    logits = []
-    batch_size = outputs.size(0)
-    logcmk = Logcmk.apply
+# def contrastiveNLLvMF(outputs, targets, label_embeddings, device):
+#     """
+#         Training: Flat training
+#         Prediction: Flat prediction
+#     :param outputs: BERT 100 dim vectors
+#     :param targets: label indices
+#     :param label_embeddings: tensor with label embeddings at their corresponding label indices
+#     :param device: device
+#     :return: loss, logits
+#     """
+#     loss = 0
+#     logits = []
+#     batch_size = outputs.size(0)
+#     logcmk = Logcmk.apply
+#
+#     if targets is not None:
+#         for i, (out_t, targ_t) in enumerate(zip(outputs, targets)):
+#             # out_t -> dim
+#             # targ_t -> label_index
+#
+#             out_vec_t = out_t
+#             kappa = out_vec_t.norm(p=2, dim=-1)  # *tar_vec_t.norm(p=2,dim=-1)
+#             out_vec_norm_t = torch.nn.functional.normalize(out_vec_t, p=2, dim=-1)
+#
+#             temp = []
+#             left = 0
+#             logits_temp = []
+#             for l in range(label_embeddings.shape[0]):
+#                 tar_vec_t = label_embeddings[l]
+#                 tar_vec_norm_t = torch.nn.functional.normalize(tar_vec_t, p=2, dim=-1)
+#                 n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
+#                         0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
+#                 # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
+#                 if l == targ_t:
+#                     left = n_log_vmf
+#                 else:
+#                     temp.append(-n_log_vmf)
+#                 logits_temp.append(-n_log_vmf)
+#             right = torch.logsumexp(torch.tensor(temp).to(device).view(1, -1), dim=1).to(device)
+#             loss += (left + right)
+#             logits.append(logits_temp)
+#
+#         loss = loss.div(batch_size).to(device)
+#         print("Loss:", loss, flush=True)
+#         logits = torch.tensor(logits).to(device)
+#     else:
+#         for i, out_t in enumerate(outputs):
+#             # out_t -> dim
+#             # targ_t -> label_index
+#
+#             out_vec_t = out_t
+#             kappa = out_vec_t.norm(p=2, dim=-1)  # *tar_vec_t.norm(p=2,dim=-1)
+#             out_vec_norm_t = torch.nn.functional.normalize(out_vec_t, p=2, dim=-1)
+#
+#             logits_temp = []
+#             for l in range(label_embeddings.shape[0]):
+#                 tar_vec_t = label_embeddings[l]
+#                 tar_vec_norm_t = torch.nn.functional.normalize(tar_vec_t, p=2, dim=-1)
+#                 n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
+#                         0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
+#                 # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
+#                 logits_temp.append(-n_log_vmf)
+#             logits.append(logits_temp)
+#
+#         logits = torch.tensor(logits).to(device)
+#     return loss, logits
 
-    if targets is not None:
-        for i, (out_t, targ_t) in enumerate(zip(outputs, targets)):
-            # out_t -> dim
-            # targ_t -> label_index
 
-            out_vec_t = out_t
-            kappa = out_vec_t.norm(p=2, dim=-1)  # *tar_vec_t.norm(p=2,dim=-1)
-            out_vec_norm_t = torch.nn.functional.normalize(out_vec_t, p=2, dim=-1)
-
-            temp = []
-            left = 0
-            logits_temp = []
-            for l in range(label_embeddings.shape[0]):
-                tar_vec_t = label_embeddings[l]
-                tar_vec_norm_t = torch.nn.functional.normalize(tar_vec_t, p=2, dim=-1)
-                n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
-                        0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
-                # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
-                if l == targ_t:
-                    left = n_log_vmf
-                else:
-                    temp.append(-n_log_vmf)
-                logits_temp.append(-n_log_vmf)
-            right = torch.logsumexp(torch.tensor(temp).to(device).view(1, -1), dim=1).to(device)
-            loss += (left + right)
-            logits.append(logits_temp)
-
-        loss = loss.div(batch_size).to(device)
-        print("Loss:", loss, flush=True)
-        logits = torch.tensor(logits).to(device)
-    else:
-        for i, out_t in enumerate(outputs):
-            # out_t -> dim
-            # targ_t -> label_index
-
-            out_vec_t = out_t
-            kappa = out_vec_t.norm(p=2, dim=-1)  # *tar_vec_t.norm(p=2,dim=-1)
-            out_vec_norm_t = torch.nn.functional.normalize(out_vec_t, p=2, dim=-1)
-
-            logits_temp = []
-            for l in range(label_embeddings.shape[0]):
-                tar_vec_t = label_embeddings[l]
-                tar_vec_norm_t = torch.nn.functional.normalize(tar_vec_t, p=2, dim=-1)
-                n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
-                        0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
-                # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
-                logits_temp.append(-n_log_vmf)
-            logits.append(logits_temp)
-
-        logits = torch.tensor(logits).to(device)
-    return loss, logits
-
-
-def contrastiveNLLvMFCoarseFine(outputs, targets, label_embeddings, device, parent_child):
+def contrastiveNLLvMF(outputs, targets, label_embeddings, device, additional_args):
     """
         Training: Trains over coarse-grained labels contrasted over other coarse-grained labels and their fine-grained labels.
         prediction: Predicts over all child labels.
@@ -123,13 +123,21 @@ def contrastiveNLLvMFCoarseFine(outputs, targets, label_embeddings, device, pare
     :param targets: label indices
     :param label_embeddings: tensor with label embeddings at their corresponding label indices
     :param device: device
-    :param parent_child: coarse-fine mapping of labels with label-indices as keys and values
+    :param additional_args: contain possible_labels and contrastive map.
+                possible_labels: possible labels indicated with their label indices
+                contrastive_map: contrastive map from one label index to other label indices with which it has to be contrasted.
     :return: loss, logits
     """
     loss = 0
     logits = []
     batch_size = outputs.size(0)
     logcmk = Logcmk.apply
+    intra_label_index = {}
+    possible_labels = additional_args["possible_labels"]
+    contrastive_map = additional_args["contrastive_map"]
+
+    for i, pos_lbl in enumerate(possible_labels):
+        intra_label_index[pos_lbl] = i
 
     if targets is not None:
         for i, (out_t, targ_t) in enumerate(zip(outputs, targets)):
@@ -141,21 +149,19 @@ def contrastiveNLLvMFCoarseFine(outputs, targets, label_embeddings, device, pare
             out_vec_norm_t = torch.nn.functional.normalize(out_vec_t, p=2, dim=-1)
 
             temp = []
-            left = 0
-            logits_temp = []
+            logits_temp = [0] * len(possible_labels)
+            left = compute_n_log_vmf(kappa, label_embeddings, logcmk, out_vec_norm_t, targ_t.item())
+            logits_temp[intra_label_index[targ_t.item()]] = -left
 
-            loopy_var = list(set(range(label_embeddings.shape[0])) - set(parent_child[targ_t]))
-            for l in loopy_var:
-                tar_vec_t = label_embeddings[l]
-                tar_vec_norm_t = torch.nn.functional.normalize(tar_vec_t, p=2, dim=-1)
-                n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
-                        0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
+            for con_label in contrastive_map[targ_t.item()]:
+                n_log_vmf = compute_n_log_vmf(kappa, label_embeddings, logcmk, out_vec_norm_t, con_label)
                 # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
-                if l == targ_t:
-                    left = n_log_vmf
-                else:
-                    temp.append(-n_log_vmf)
-                logits_temp.append(-n_log_vmf)
+                temp.append(-n_log_vmf)
+                try:
+                    logits_temp[intra_label_index[con_label]] = -n_log_vmf
+                except:
+                    continue
+
             right = torch.logsumexp(torch.tensor(temp).to(device).view(1, -1), dim=1).to(device)
             loss += (left + right)
             logits.append(logits_temp)
@@ -174,22 +180,21 @@ def contrastiveNLLvMFCoarseFine(outputs, targets, label_embeddings, device, pare
 
             logits_temp = []
 
-            loopy_var = []
-            for p in parent_child:
-                for ch in parent_child[p]:
-                    loopy_var.append(ch)
-
-            for l in loopy_var:
-                tar_vec_t = label_embeddings[l]
-                tar_vec_norm_t = torch.nn.functional.normalize(tar_vec_t, p=2, dim=-1)
-                n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (
-                        0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
+            for l in possible_labels:
+                n_log_vmf = compute_n_log_vmf(kappa, label_embeddings, logcmk, out_vec_norm_t, l)
                 # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
                 logits_temp.append(-n_log_vmf)
             logits.append(logits_temp)
 
         logits = torch.tensor(logits).to(device)
     return loss, logits
+
+
+def compute_n_log_vmf(kappa, label_embeddings, logcmk, out_vec_norm_t, targ_t_index):
+    tar_vec_t = label_embeddings[targ_t_index]
+    tar_vec_norm_t = torch.nn.functional.normalize(tar_vec_t, p=2, dim=-1)
+    n_log_vmf = - logcmk(kappa) + torch.log(1 + kappa) * (0.2 - (out_vec_norm_t * tar_vec_norm_t).sum(dim=-1))
+    return n_log_vmf
 
 
 if __name__ == "__main__":

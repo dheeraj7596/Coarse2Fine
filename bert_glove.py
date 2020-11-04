@@ -26,7 +26,7 @@ def format_time(elapsed):
     return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
-def train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs, parent_child=None):
+def train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs, additional_args):
     optimizer = AdamW(model.parameters(),
                       lr=2e-5,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8.
@@ -81,7 +81,7 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
                                  attention_mask=b_input_mask,
                                  labels=b_labels,
                                  device=device,
-                                 parent_child=parent_child)
+                                 additional_args=additional_args)
 
             total_train_loss += loss.item()
             loss.backward()
@@ -125,7 +125,7 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
                                      attention_mask=b_input_mask,
                                      labels=b_labels,
                                      device=device,
-                                     parent_child=parent_child)
+                                     additional_args=additional_args)
 
             total_eval_loss += loss.item()
 
@@ -193,7 +193,7 @@ def create_label_embeddings(glove_dir, index_to_label, device, label_word_map=No
     return label_embeddings
 
 
-def evaluate(model, prediction_dataloader, label_embeddings, device, parent_child=None):
+def evaluate(model, prediction_dataloader, label_embeddings, device, additional_args):
     # Prediction on test set
     # Put model in evaluation mode
     model.eval()
@@ -219,7 +219,7 @@ def evaluate(model, prediction_dataloader, label_embeddings, device, parent_chil
                                  attention_mask=b_input_mask,
                                  labels=None,
                                  device=device,
-                                 parent_child=parent_child)
+                                 additional_args=additional_args)
 
         # Move logits and labels to CPU
         logits = logits.detach().cpu().numpy()
@@ -232,7 +232,7 @@ def evaluate(model, prediction_dataloader, label_embeddings, device, parent_chil
     return predictions, true_labels
 
 
-def test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label, parent_child=None):
+def test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label, additional_args):
     input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_test, label_to_index)
     # Set the batch size.
     batch_size = 16
@@ -240,21 +240,16 @@ def test(df_test, tokenizer, model, label_embeddings, device, label_to_index, in
     prediction_data = TensorDataset(input_ids, attention_masks, labels)
     prediction_sampler = SequentialSampler(prediction_data)
     prediction_dataloader = DataLoader(prediction_data, sampler=prediction_sampler, batch_size=batch_size)
-    predictions, true_labels = evaluate(model, prediction_dataloader, label_embeddings, device, parent_child)
+    predictions, true_labels = evaluate(model, prediction_dataloader, label_embeddings, device, additional_args)
 
-    possible_labels = []
-    if parent_child is not None:
-        for p in parent_child:
-            possible_labels += parent_child[p]
+    possible_labels = additional_args["possible_labels"]
 
     preds = []
     for pred in predictions:
-        if parent_child is None:
-            preds = preds + list(pred.argmax(axis=-1))
-        else:
-            temp_list = pred.argmax(axis=-1)
-            for index in temp_list:
-                preds.append(possible_labels[index])
+        # print(pred.max(axis=-1))
+        temp_list = pred.argmax(axis=-1)
+        for index in temp_list:
+            preds.append(possible_labels[index])
 
     true = []
     for t in true_labels:
@@ -304,9 +299,11 @@ if __name__ == "__main__":
     label_set = set(df_train.label.values)
     label_to_index = {}
     index_to_label = {}
+    distinct_label_inds = []
     for i, l in enumerate(list(label_set)):
         label_to_index[l] = i
         index_to_label[i] = l
+        distinct_label_inds.append(i)
 
     # label_word_map = json.load(open(pkl_dump_dir + "label_word_map.json", "r"))
     label_embeddings = create_label_embeddings(glove_dir, index_to_label, device)
@@ -322,15 +319,23 @@ if __name__ == "__main__":
     model = BERTClass()
     model.to(device)
 
-    model = train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs=5)
+    add_args = {}
+    add_args["possible_labels"] = distinct_label_inds
+    contrastive_map = {}
+    for ind in distinct_label_inds:
+        contrastive_map[ind] = list(set(distinct_label_inds) - {ind})
+    add_args["contrastive_map"] = contrastive_map
 
-    true, preds = test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label)
+    model = train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs=5,
+                  additional_args=add_args)
+
+    true, preds = test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label, add_args)
     print(classification_report(true, preds), flush=True)
 
     plot_confusion_mat(df_test["label"], preds, list(label_set))
     plt.savefig("./conf_mat.png")
 
-    true, preds = test(df_train, tokenizer, model, label_embeddings, device, label_to_index, index_to_label)
+    true, preds = test(df_train, tokenizer, model, label_embeddings, device, label_to_index, index_to_label, add_args)
     print(classification_report(true, preds), flush=True)
 
     tokenizer.save_pretrained(tok_path)
