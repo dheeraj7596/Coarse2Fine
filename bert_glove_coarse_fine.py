@@ -45,14 +45,19 @@ if __name__ == "__main__":
     print('Loading BERT tokenizer...', flush=True)
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
-    label_set = set(df_train.label.values).union(set(df_fine.label.values))
+    coarse_labels = list(set(df_train.label.values))
+    fine_labels = list(set(df_fine.label.values))
+
+    label_set = coarse_labels + fine_labels
     label_to_index = {}
     index_to_label = {}
-    distinct_coarse_label_inds = []
     for i, l in enumerate(list(label_set)):
         label_to_index[l] = i
         index_to_label[i] = l
-        distinct_coarse_label_inds.append(i)
+
+    distinct_coarse_label_inds = []
+    for l in coarse_labels:
+        distinct_coarse_label_inds.append(label_to_index[l])
 
     parent_child = {}
     for p in parent_to_child:
