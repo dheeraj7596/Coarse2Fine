@@ -98,7 +98,7 @@ if __name__ == "__main__":
         add_args["possible_labels"] = children_ids
         contrastive_map = {}
         for ind in children_ids:
-            contrastive_map[ind] = list(set(children) - {ind})
+            contrastive_map[ind] = list(set(children_ids) - {ind})
         add_args["contrastive_map"] = contrastive_map
 
         model = train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs=5,

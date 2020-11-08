@@ -22,11 +22,6 @@ class Logcmk(torch.autograd.Function):
         k = k.double()
         answer = (m / 2 - 1) * torch.log(k) - torch.log(scipy.special.ive(m / 2 - 1, k.cpu())) - k - (m / 2) * np.log(
             2 * np.pi)
-        # answer = (m / 2 - 1) * torch.log(k) - torch.log(scipy.special.ive(m / 2 - 1, k)).to(device) - k - (m / 2) * torch.tensor(np.log(2 * np.pi))
-        # answer = (m / 2 - 1) * torch.log(k)
-        # answer = answer - torch.log(torch.tensor(scipy.special.ive(m / 2 - 1, k)))
-        # answer = answer - k - (m / 2) * torch.tensor(np.log(2 * np.pi))
-        # answer = (m / 2 - 1) * torch.log(k) - torch.log(scipy.special.ive(m / 2 - 1, k)).to(device) - (m / 2) * np.log(2 * np.pi)
         answer = answer.float()
         return answer
 
@@ -156,13 +151,13 @@ def contrastiveNLLvMF(outputs, targets, label_embeddings, device, additional_arg
             for con_label in contrastive_map[targ_t.item()]:
                 n_log_vmf = compute_n_log_vmf(kappa, label_embeddings, logcmk, out_vec_norm_t, con_label)
                 # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
-                temp.append(-n_log_vmf)
+                temp.append(-n_log_vmf.view(1))
                 try:
                     logits_temp[intra_label_index[con_label]] = -n_log_vmf
                 except:
                     continue
 
-            right = torch.logsumexp(torch.tensor(temp).to(device).view(1, -1), dim=1).to(device)
+            right = torch.logsumexp(torch.cat(temp).to(device).view(1, -1), dim=1).to(device)
             loss += (left + right)
             logits.append(logits_temp)
 
@@ -222,13 +217,13 @@ def contrastiveNLLvMF_self(outputs, targets, label_embeddings, device, additiona
             logits_temp = []
             for con_label in possible_labels:
                 n_log_vmf = compute_n_log_vmf(kappa, label_embeddings, logcmk, out_vec_norm_t, con_label)
-                temp.append(-n_log_vmf)
+                temp.append(-n_log_vmf.view(1))
                 logits_temp.append(-n_log_vmf)
 
-            left = torch.max(torch.tensor(temp))
+            left = torch.max(torch.cat(temp))
             ind = temp.index(left)
             del temp[ind]
-            right = torch.logsumexp(torch.tensor(temp).to(device).view(1, -1), dim=1).to(device)
+            right = torch.logsumexp(torch.cat(temp).to(device).view(1, -1), dim=1).to(device)
             loss += (left + right)
             logits.append(logits_temp)
 
