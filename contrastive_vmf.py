@@ -190,6 +190,72 @@ def contrastiveNLLvMF(outputs, targets, label_embeddings, device, additional_arg
     return loss, logits
 
 
+def contrastiveNLLvMF_self(outputs, targets, label_embeddings, device, additional_args):
+    """
+        Training: Trains over coarse-grained labels contrasted over other coarse-grained labels and their fine-grained labels.
+        prediction: Predicts over all child labels.
+    :param outputs: BERT 100 dim vectors
+    :param targets: label indices
+    :param label_embeddings: tensor with label embeddings at their corresponding label indices
+    :param device: device
+    :param additional_args: contain possible_labels and contrastive map.
+                possible_labels: possible labels indicated with their label indices
+                contrastive_map: contrastive map from one label index to other label indices with which it has to be contrasted.
+    :return: loss, logits
+    """
+    loss = 0
+    logits = []
+    batch_size = outputs.size(0)
+    logcmk = Logcmk.apply
+    possible_labels = additional_args["possible_labels"]
+
+    if targets is not None:
+        for i, (out_t, targ_t) in enumerate(zip(outputs, targets)):
+            # out_t -> dim
+            # targ_t -> label_index
+
+            out_vec_t = out_t
+            kappa = out_vec_t.norm(p=2, dim=-1)  # *tar_vec_t.norm(p=2,dim=-1)
+            out_vec_norm_t = torch.nn.functional.normalize(out_vec_t, p=2, dim=-1)
+
+            temp = []
+            logits_temp = []
+            for con_label in possible_labels:
+                n_log_vmf = compute_n_log_vmf(kappa, label_embeddings, logcmk, out_vec_norm_t, con_label)
+                temp.append(-n_log_vmf)
+                logits_temp.append(-n_log_vmf)
+
+            left = torch.max(torch.tensor(temp))
+            ind = temp.index(left)
+            del temp[ind]
+            right = torch.logsumexp(torch.tensor(temp).to(device).view(1, -1), dim=1).to(device)
+            loss += (left + right)
+            logits.append(logits_temp)
+
+        loss = loss.div(batch_size).to(device)
+        print("Loss:", loss, flush=True)
+        logits = torch.tensor(logits).to(device)
+    else:
+        for i, out_t in enumerate(outputs):
+            # out_t -> dim
+            # targ_t -> label_index
+
+            out_vec_t = out_t
+            kappa = out_vec_t.norm(p=2, dim=-1)  # *tar_vec_t.norm(p=2,dim=-1)
+            out_vec_norm_t = torch.nn.functional.normalize(out_vec_t, p=2, dim=-1)
+
+            logits_temp = []
+
+            for l in possible_labels:
+                n_log_vmf = compute_n_log_vmf(kappa, label_embeddings, logcmk, out_vec_norm_t, l)
+                # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
+                logits_temp.append(-n_log_vmf)
+            logits.append(logits_temp)
+
+        logits = torch.tensor(logits).to(device)
+    return loss, logits
+
+
 def compute_n_log_vmf(kappa, label_embeddings, logcmk, out_vec_norm_t, targ_t_index):
     tar_vec_t = label_embeddings[targ_t_index]
     tar_vec_norm_t = torch.nn.functional.normalize(tar_vec_t, p=2, dim=-1)
