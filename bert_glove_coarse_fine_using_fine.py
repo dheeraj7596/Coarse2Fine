@@ -72,7 +72,7 @@ if __name__ == "__main__":
     # label_embeddings = create_label_embeddings(glove_dir, index_to_label, device, label_word_map)
 
     for p in ["sports"]:
-        print("Training for Coarse label:", p)
+        print("Training for Coarse label:", p, flush=True)
         children = parent_to_child[p]
         children_ids = []
         for l in children:
@@ -104,15 +104,15 @@ if __name__ == "__main__":
         model = train(train_dataloader, validation_dataloader, model, label_embeddings, device, epochs=5,
                       additional_args=add_args)
 
-        print("****************** CLASSIFICATION REPORT ON Test Data ********************")
+        print("****************** CLASSIFICATION REPORT ON Test Data ********************", flush=True)
         true, preds = test(df_test, tokenizer, model, label_embeddings, device, label_to_index, index_to_label,
                            add_args)
         print(classification_report(true, preds), flush=True)
 
-        print("****************** CLASSIFICATION REPORT ON Train Data ********************")
+        print("****************** CLASSIFICATION REPORT ON Train Data ********************", flush=True)
         true, preds = test(df_train, tokenizer, model, label_embeddings, device, label_to_index, index_to_label,
                            add_args)
         print(classification_report(true, preds), flush=True)
-        print("*" * 80)
+        print("*" * 80, flush=True)
         # tokenizer.save_pretrained(tok_path)
         # torch.save(model, model_path + model_name)
