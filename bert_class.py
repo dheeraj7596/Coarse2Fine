@@ -10,6 +10,7 @@ class BERTClass(torch.nn.Module):
         self.l2 = torch.nn.Dropout(0.3)
         self.l3 = torch.nn.Linear(768, 768)
         self.l3.weight.data.copy_(torch.eye(768) + 10 ** -6 * self.l3.weight)
+        self.l3.bias.data.copy_(torch.zeros(768))
         # self.l3 = torch.nn.Linear(768, 500)
         # self.l4 = torch.nn.Linear(500, 300)
         # self.l5 = torch.nn.Linear(300, 100)
