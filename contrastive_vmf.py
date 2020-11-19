@@ -203,6 +203,10 @@ def contrastiveNLLvMF_self(outputs, targets, label_embeddings, device, additiona
     batch_size = outputs.size(0)
     logcmk = Logcmk.apply
     possible_labels = additional_args["possible_labels"]
+    label_to_ind = {}  # maps label to index in possible_labels list
+    for i, l in enumerate(possible_labels):
+        label_to_ind[l] = i
+    contrastive_map = additional_args["contrastive_map"]
 
     if targets is not None:
         for i, (out_t, targ_t) in enumerate(zip(outputs, targets)):
@@ -214,17 +218,18 @@ def contrastiveNLLvMF_self(outputs, targets, label_embeddings, device, additiona
             out_vec_norm_t = torch.nn.functional.normalize(out_vec_t, p=2, dim=-1)
 
             temp = []
-            logits_temp = []
-            for con_label in possible_labels:
+            logits_temp = [-float("inf") for _ in range(len(possible_labels))]
+            for con_label in contrastive_map[targ_t.item()]:
                 n_log_vmf = compute_n_log_vmf(kappa, label_embeddings, logcmk, out_vec_norm_t, con_label)
                 temp.append(-n_log_vmf.view(1))
-                logits_temp.append(-n_log_vmf)
+                logits_temp[label_to_ind[con_label]] = -n_log_vmf
 
             left = torch.max(torch.cat(temp))
-            ind = temp.index(left)
-            del temp[ind]
-            right = torch.logsumexp(torch.cat(temp).to(device).view(1, -1), dim=1).to(device)
-            loss += (left + right)
+            # ind = temp.index(left)
+            # del temp[ind]
+            # right = torch.logsumexp(torch.cat(temp).to(device).view(1, -1), dim=1).to(device)
+            # loss += (left + right)
+            loss = left
             logits.append(logits_temp)
 
         loss = loss.div(batch_size).to(device)
@@ -239,12 +244,12 @@ def contrastiveNLLvMF_self(outputs, targets, label_embeddings, device, additiona
             kappa = out_vec_t.norm(p=2, dim=-1)  # *tar_vec_t.norm(p=2,dim=-1)
             out_vec_norm_t = torch.nn.functional.normalize(out_vec_t, p=2, dim=-1)
 
-            logits_temp = []
+            logits_temp = [-float("inf") for _ in range(len(possible_labels))]
 
             for l in possible_labels:
                 n_log_vmf = compute_n_log_vmf(kappa, label_embeddings, logcmk, out_vec_norm_t, l)
                 # n_log_vmf = - logcmk(kappa, device) - (out_vec_t * tar_vec_norm_t).sum(dim=-1)
-                logits_temp.append(-n_log_vmf)
+                logits_temp[label_to_ind[l]] = -n_log_vmf
             logits.append(logits_temp)
 
         logits = torch.tensor(logits).to(device)

@@ -112,6 +112,7 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
         total_eval_accuracy = 0
         total_eval_loss = 0
 
+        predictions, true_labels = [], []
         # Evaluate data for one epoch
         for batch in validation_dataloader:
             b_input_ids = batch[0].to(device)
@@ -132,10 +133,26 @@ def train(train_dataloader, validation_dataloader, model, label_embeddings, devi
             logits = logits.detach().cpu().numpy()
             label_ids = b_labels.to('cpu').numpy()
 
-            total_eval_accuracy += flat_accuracy(logits, label_ids)
+            predictions.append(logits)
+            true_labels.append(label_ids)
 
         # Report the final accuracy for this validation run.
-        avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
+
+        possible_labels = additional_args["possible_labels"]
+        preds = []
+        for pred in predictions:
+            # print(pred.max(axis=-1))
+            temp_list = pred.argmax(axis=-1)
+            for index in temp_list:
+                preds.append(possible_labels[index])
+
+        true = []
+        for t in true_labels:
+            true = true + list(t)
+
+        assert len(preds) == len(true)
+
+        avg_val_accuracy = np.sum(preds == true) / len(true)
         print("  Accuracy: {0:.2f}".format(avg_val_accuracy), flush=True)
 
         # Calculate the average loss over all of the batches.
