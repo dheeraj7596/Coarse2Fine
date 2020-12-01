@@ -137,11 +137,12 @@ def train(model, tokenizer, train_dataloader, validation_dataloader, device):
 
             model.zero_grad()
 
-            loss, logits = model(b_input_ids,
-                                 token_type_ids=None,
-                                 attention_mask=b_input_mask,
-                                 labels=b_labels)
+            outputs = model(b_input_ids,
+                            token_type_ids=None,
+                            attention_mask=b_input_mask,
+                            labels=b_labels)
 
+            loss = outputs[0]
             total_train_loss += loss.item()
 
             loss.backward()
@@ -181,12 +182,13 @@ def train(model, tokenizer, train_dataloader, validation_dataloader, device):
             b_labels = batch[0].to(device)
 
             with torch.no_grad():
-                (loss, logits) = model(b_input_ids,
-                                       token_type_ids=None,
-                                       attention_mask=b_input_mask,
-                                       labels=b_labels)
+                outputs = model(b_input_ids,
+                                token_type_ids=None,
+                                attention_mask=b_input_mask,
+                                labels=b_labels)
 
             # Accumulate the validation loss.
+            loss = outputs[0]
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
@@ -234,11 +236,11 @@ def test(model, tokenizer, label_set):
 
 
 if __name__ == "__main__":
+    # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     basepath = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
     # glove_dir = "/Users/dheerajmekala/Work/metaguide/data/glove.6B"
-    glove_dir = "/data4/dheeraj/metaguide/glove.6B"
 
     tok_path = pkl_dump_dir + "gpt2/tokenizer_coarse"
     model_path = pkl_dump_dir + "gpt2/model/"
