@@ -277,7 +277,7 @@ if __name__ == "__main__":
         parent_tokens = tokenizer.tokenize(p)
         max_num = -1
         for ch in children:
-            max_num = max(tokenizer.tokenize(" ".join(ch.split("_"))), max_num)
+            max_num = max(len(tokenizer.tokenize(" ".join(ch.split("_")))), max_num)
         if len(parent_tokens) >= max_num:
             pad_token_dict[p] = 0
         else:
@@ -309,3 +309,4 @@ if __name__ == "__main__":
 
     tokenizer.save_pretrained(tok_path)
     torch.save(model, model_path + model_name)
+    pickle.dump(pad_token_dict, open(pkl_dump_dir + "pad_token_dict.pkl", "wb"))
