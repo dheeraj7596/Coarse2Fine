@@ -32,7 +32,7 @@ def gpt2_tokenize(tokenizer, df, max_length=768):
     for i, sent in enumerate(sentences):
         label = labels[i]
         encoded_dict = tokenizer.encode_plus(
-            label + " <|labelsep|> " + sent,  # Sentence to encode.
+            " ".join(label.split("_")) + " <|labelsep|> " + sent,  # Sentence to encode.
             truncation=True,
             max_length=max_length - 2,  # Pad & truncate all sentences.
             pad_to_max_length=True,
@@ -218,13 +218,13 @@ def train(model, tokenizer, train_dataloader, validation_dataloader, device):
     return model
 
 
-def test(model, tokenizer, label_set):
+def test(model, tokenizer, label_set, device):
     model.eval()
     for l in label_set:
         print("Generating sentence for label", l)
-        text = tokenizer.bos_token_id + " " + l + " <|labelsep|> "
+        text = tokenizer.bos_token + " " + l + " <|labelsep|> "
         sample_outputs = model.generate(
-            input_ids=tokenizer.encode(text, return_tensors='pt'),
+            input_ids=tokenizer.encode(text, return_tensors='pt').to(device),
             do_sample=True,
             top_k=50,
             max_length=200,
@@ -286,7 +286,7 @@ if __name__ == "__main__":
     train_dataloader, validation_dataloader = create_data_loaders(dataset, batch_size=4)
 
     model = train(model, tokenizer, train_dataloader, validation_dataloader, device)
-    test(model, tokenizer, label_set)
+    test(model, tokenizer, label_set, device)
 
     tokenizer.save_pretrained(tok_path)
     torch.save(model, model_path + model_name)
