@@ -22,7 +22,7 @@ def format_time(elapsed):
     return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
-def gpt2_tokenize(tokenizer, df, max_length=768):
+def gpt2_tokenize(tokenizer, df, pad_token_dict, max_length=768):
     input_ids = []
     attention_masks = []
     # For every sentence...
@@ -31,8 +31,13 @@ def gpt2_tokenize(tokenizer, df, max_length=768):
 
     for i, sent in enumerate(sentences):
         label = labels[i]
+        temp_list = ["<|labelpad|>"] * pad_token_dict[label]
+        if len(temp_list) > 0:
+            label_str = label + " " + " ".join(temp_list)
+        else:
+            label_str = label
         encoded_dict = tokenizer.encode_plus(
-            " ".join(label.split("_")) + " <|labelsep|> " + sent,  # Sentence to encode.
+            label_str + " <|labelsep|> " + sent,  # Sentence to encode.
             truncation=True,
             max_length=max_length - 2,  # Pad & truncate all sentences.
             pad_to_max_length=True,
@@ -218,11 +223,11 @@ def train(model, tokenizer, train_dataloader, validation_dataloader, device):
     return model
 
 
-def test(model, tokenizer, label_set, device):
+def test_generate(model, tokenizer, label_set, device):
     model.eval()
     for l in label_set:
         print("Generating sentence for label", l)
-        text = tokenizer.bos_token + " " + l + " <|labelsep|> "
+        text = tokenizer.bos_token + " " + " ".join(l.split("_")) + " <|labelsep|> "
         sample_outputs = model.generate(
             input_ids=tokenizer.encode(text, return_tensors='pt').to(device),
             do_sample=True,
@@ -260,9 +265,23 @@ if __name__ == "__main__":
         device = torch.device("cpu")
 
     df = pickle.load(open(pkl_dump_dir + "df_coarse.pkl", "rb"))
+    parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
 
     tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token='<|startoftext|>', eos_token='<|endoftext|>',
-                                              pad_token='<|pad|>', additional_special_tokens=['<|labelsep|>'])
+                                              pad_token='<|pad|>',
+                                              additional_special_tokens=['<|labelsep|>', '<|labelpad|>'])
+
+    pad_token_dict = {}
+    for p in parent_to_child:
+        children = parent_to_child[p]
+        parent_tokens = tokenizer.tokenize(p)
+        max_num = -1
+        for ch in children:
+            max_num = max(tokenizer.tokenize(" ".join(ch.split("_"))), max_num)
+        if len(parent_tokens) >= max_num:
+            pad_token_dict[p] = 0
+        else:
+            pad_token_dict[p] = max_num - len(parent_tokens)
 
     # tokenizer.convert_ids_to_tokens(tokenizer.convert_tokens_to_ids(tokenizer.tokenize("<|startoftext|> sports <|labelsep|> Hello, my dog is cute <|endoftext|>")))
 
@@ -277,7 +296,7 @@ if __name__ == "__main__":
         label_to_index[l] = i
         index_to_label[i] = l
 
-    input_ids, attention_masks = gpt2_tokenize(tokenizer, df)
+    input_ids, attention_masks = gpt2_tokenize(tokenizer, df, pad_token_dict)
 
     # Combine the training inputs into a TensorDataset.
     dataset = TensorDataset(input_ids, attention_masks)
@@ -286,7 +305,7 @@ if __name__ == "__main__":
     train_dataloader, validation_dataloader = create_data_loaders(dataset, batch_size=4)
 
     model = train(model, tokenizer, train_dataloader, validation_dataloader, device)
-    test(model, tokenizer, label_set, device)
+    test_generate(model, tokenizer, label_set, device)
 
     tokenizer.save_pretrained(tok_path)
     torch.save(model, model_path + model_name)
