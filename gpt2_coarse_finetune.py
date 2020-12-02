@@ -223,11 +223,16 @@ def train(model, tokenizer, train_dataloader, validation_dataloader, device):
     return model
 
 
-def test_generate(model, tokenizer, label_set, device):
+def test_generate(model, tokenizer, label_set, pad_token_dict, device):
     model.eval()
     for l in label_set:
         print("Generating sentence for label", l)
-        text = tokenizer.bos_token + " " + " ".join(l.split("_")) + " <|labelsep|> "
+        temp_list = ["<|labelpad|>"] * pad_token_dict[l]
+        if len(temp_list) > 0:
+            label_str = l + " " + " ".join(temp_list)
+        else:
+            label_str = l
+        text = tokenizer.bos_token + " " + label_str + " <|labelsep|> "
         sample_outputs = model.generate(
             input_ids=tokenizer.encode(text, return_tensors='pt').to(device),
             do_sample=True,
@@ -305,7 +310,7 @@ if __name__ == "__main__":
     train_dataloader, validation_dataloader = create_data_loaders(dataset, batch_size=4)
 
     model = train(model, tokenizer, train_dataloader, validation_dataloader, device)
-    test_generate(model, tokenizer, label_set, device)
+    test_generate(model, tokenizer, label_set, pad_token_dict, device)
 
     tokenizer.save_pretrained(tok_path)
     torch.save(model, model_path + model_name)
