@@ -57,7 +57,8 @@ def gpt2_fine_tokenize(tokenizer, df, index_to_label, pad_token_dict, max_length
 
 
 def train(coarse_model, fine_model, train_dataloader, validation_dataloader, doc_start_ind, index_to_label, device):
-    fine_posterior = torch.nn.Parameter(torch.ones(len(index_to_label)))
+    epsilon = 1e-40 # Defined to avoid log probability getting undefined.
+    fine_posterior = torch.nn.Parameter(torch.ones(len(index_to_label)).to(device))
     optimizer = AdamW(list(fine_model.parameters()) + [fine_posterior],
                       lr=5e-4,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8.
@@ -129,12 +130,13 @@ def train(coarse_model, fine_model, train_dataloader, validation_dataloader, doc
                     fine_probs = fine_logits.gather(2, b_fine_labels[:, doc_start_ind:].unsqueeze(dim=-1)).squeeze(
                         dim=-1).squeeze(dim=0)
                     temp += fine_probs * fine_posterior_probs[l_ind]
-                batch_fine_probs.append(temp)
+                batch_fine_probs.append(temp + epsilon)
 
             batch_fine_probs = torch.cat(batch_fine_probs, dim=0)
 
             loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach())
             total_train_loss += loss.item()
+            print("Loss:", loss.item())
 
             loss.backward()
             optimizer.step()
@@ -262,6 +264,9 @@ def create_pad_token_dict(p, parent_to_child, coarse_tokenizer, fine_tokenizer):
     return doc_start_ind, pad_token_dict
 
 
+# def test(fine_model, fine_posterior, test_dataloader, doc_start_ind, index_to_label, device):
+
+
 if __name__ == "__main__":
     # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     basepath = "/data4/dheeraj/coarse2fine/"
@@ -331,7 +336,7 @@ if __name__ == "__main__":
                                                                   pad_token_dict)
         dataset = TensorDataset(coarse_input_ids, coarse_attention_masks, fine_input_ids, fine_attention_masks)
 
-        train_dataloader, validation_dataloader = create_data_loaders(dataset, batch_size=4)
+        train_dataloader, validation_dataloader = create_data_loaders(dataset, batch_size=1)
         fine_posterior, fine_model = train(coarse_model,
                                            fine_model,
                                            train_dataloader,
@@ -340,7 +345,7 @@ if __name__ == "__main__":
                                            index_to_label,
                                            device)
         test_generate(fine_model, fine_tokenizer, children, pad_token_dict, device)
-        true, preds = test(fine_model, fine_tokenizer, fine_posterior, temp_df, device)
+        true, preds = test(fine_model, fine_posterior, test_dataloader, doc_start_ind, index_to_label, device)
         all_true += true
         all_preds += preds
 
