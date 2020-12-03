@@ -229,9 +229,9 @@ def test_generate(model, tokenizer, label_set, pad_token_dict, device):
         print("Generating sentence for label", l)
         temp_list = ["<|labelpad|>"] * pad_token_dict[l]
         if len(temp_list) > 0:
-            label_str = l + " " + " ".join(temp_list)
+            label_str = " ".join(l.split("_")) + " " + " ".join(temp_list)
         else:
-            label_str = l
+            label_str = " ".join(l.split("_"))
         text = tokenizer.bos_token + " " + label_str + " <|labelsep|> "
         sample_outputs = model.generate(
             input_ids=tokenizer.encode(text, return_tensors='pt').to(device),
