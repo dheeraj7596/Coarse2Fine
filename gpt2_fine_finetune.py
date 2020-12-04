@@ -4,10 +4,13 @@ import pickle
 from transformers import GPT2Tokenizer, GPT2LMHeadModel, get_linear_schedule_with_warmup, AdamW
 from sklearn.metrics import classification_report
 from gpt2_coarse_finetune import gpt2_tokenize, test_generate, create_data_loaders, format_time
+from torch.utils.data import DataLoader, SequentialSampler
 from torch.utils.data import TensorDataset
 import numpy as np
 import random
 import time
+import os
+import copy
 
 
 def gpt2_fine_tokenize(tokenizer, df, index_to_label, pad_token_dict, max_length=768):
@@ -56,8 +59,9 @@ def gpt2_fine_tokenize(tokenizer, df, index_to_label, pad_token_dict, max_length
     return input_ids, attention_masks
 
 
-def train(coarse_model, fine_model, train_dataloader, validation_dataloader, doc_start_ind, index_to_label, device):
-    epsilon = 1e-40 # Defined to avoid log probability getting undefined.
+def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation_dataloader, doc_start_ind,
+          index_to_label, device):
+    epsilon = 1e-20  # Defined to avoid log probability getting undefined.
     fine_posterior = torch.nn.Parameter(torch.ones(len(index_to_label)).to(device))
     optimizer = AdamW(list(fine_model.parameters()) + [fine_posterior],
                       lr=5e-4,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
@@ -93,6 +97,23 @@ def train(coarse_model, fine_model, train_dataloader, validation_dataloader, doc
         for step, batch in enumerate(train_dataloader):
             # batch contains -> coarse_input_ids, coarse_attention_masks, fine_input_ids, fine_attention_masks
             # todo write what to do if step%sample_every case
+            if step % sample_every == 0 and not step == 0:
+                elapsed = format_time(time.time() - t0)
+                print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed),
+                      flush=True)
+                fine_model.eval()
+                sample_outputs = fine_model.generate(
+                    bos_token_id=fine_tokenizer.bos_token_id,
+                    do_sample=True,
+                    top_k=50,
+                    max_length=200,
+                    top_p=0.95,
+                    num_return_sequences=1
+                )
+                for i, sample_output in enumerate(sample_outputs):
+                    print("{}: {}".format(i, fine_tokenizer.decode(sample_output)))
+                fine_model.train()
+
             fine_posterior_probs = torch.softmax(fine_posterior, dim=0)
             print(fine_posterior_probs)
 
@@ -208,7 +229,7 @@ def train(coarse_model, fine_model, train_dataloader, validation_dataloader, doc
                         fine_probs = fine_logits.gather(2, b_fine_labels[:, doc_start_ind:].unsqueeze(dim=-1)).squeeze(
                             dim=-1).squeeze(dim=0)
                         temp += fine_probs * fine_posterior_probs[l_ind]
-                    batch_fine_probs.append(temp)
+                    batch_fine_probs.append(temp + epsilon)
 
                 batch_fine_probs = torch.cat(batch_fine_probs, dim=0)
 
@@ -264,7 +285,74 @@ def create_pad_token_dict(p, parent_to_child, coarse_tokenizer, fine_tokenizer):
     return doc_start_ind, pad_token_dict
 
 
-# def test(fine_model, fine_posterior, test_dataloader, doc_start_ind, index_to_label, device):
+def test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind, index_to_label,
+         label_to_index, true_labels, device):
+    # Set the batch size.
+    batch_size = 2
+    # Create the DataLoader.
+    labels = copy.deepcopy(true_labels)
+    for i, l in enumerate(list(labels)):
+        labels[i] = label_to_index[l]
+    labels = np.array(labels, dtype='int32')
+    labels = torch.LongTensor(labels)
+
+    prediction_data = TensorDataset(fine_input_ids, fine_attention_masks, labels)
+    prediction_sampler = SequentialSampler(prediction_data)
+    prediction_dataloader = DataLoader(prediction_data, sampler=prediction_sampler, batch_size=batch_size)
+
+    # Tracking variables
+    predictions, true_labels = [], []
+
+    fine_model.eval()
+    for batch in prediction_dataloader:
+        # batch contains -> fine_input_ids, fine_attention_masks, fine_grained_labels
+        b_size = batch_size
+        b_fine_input_ids_minibatch = batch[0].to(device)
+        b_fine_input_mask_minibatch = batch[1].to(device)
+        b_cls_labels = batch[2].to(device)
+
+        with torch.no_grad():
+            fine_posterior_log_probs = torch.log_softmax(fine_posterior, dim=0)
+            batch_fine_logits = []
+            for b_ind in range(b_size):
+                label_log_probs = []
+                for l_ind in index_to_label:
+                    b_fine_input_ids = b_fine_input_ids_minibatch[b_ind, l_ind, :].unsqueeze(0).to(device)
+                    b_fine_labels = b_fine_input_ids_minibatch[b_ind, l_ind, :].unsqueeze(0).to(device)
+                    b_fine_input_mask = b_fine_input_mask_minibatch[b_ind, l_ind, :].unsqueeze(0).to(device)
+
+                    outputs = fine_model(b_fine_input_ids,
+                                         token_type_ids=None,
+                                         attention_mask=b_fine_input_mask,
+                                         labels=b_fine_labels)
+                    fine_logits = torch.log_softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
+                    fine_log_probs = fine_logits.gather(2,
+                                                            b_fine_labels[:, doc_start_ind:].unsqueeze(dim=-1)).squeeze(
+                        dim=-1).squeeze(dim=0)
+                    label_log_probs.append(fine_posterior_log_probs[l_ind] + fine_log_probs.sum())
+                label_log_probs = torch.tensor(label_log_probs)
+                batch_fine_logits.append(label_log_probs)
+
+            batch_fine_logits = torch.cat(batch_fine_logits, dim=0)
+
+        predictions.append(batch_fine_logits.detach().cpu().numpy())
+        label_ids = b_cls_labels.to('cpu').numpy()
+        true_labels.append(label_ids)
+
+    preds = []
+    for pred in predictions:
+        preds = preds + list(pred.argmax(axis=-1))
+
+    true = []
+    for t in true_labels:
+        true = true + list(t)
+
+    for i, t in enumerate(true):
+        true[i] = index_to_label[t]
+        preds[i] = index_to_label[preds[i]]
+
+    print(classification_report(true, preds), flush=True)
+    return true, preds
 
 
 if __name__ == "__main__":
@@ -272,6 +360,8 @@ if __name__ == "__main__":
     basepath = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
+
+    base_fine_tok_path = pkl_dump_dir + "gpt2/tokenizer_fine/"
 
     coarse_tok_path = pkl_dump_dir + "gpt2/tokenizer_coarse"
     model_path = pkl_dump_dir + "gpt2/model/"
@@ -339,19 +429,24 @@ if __name__ == "__main__":
         train_dataloader, validation_dataloader = create_data_loaders(dataset, batch_size=1)
         fine_posterior, fine_model = train(coarse_model,
                                            fine_model,
+                                           fine_tokenizer,
                                            train_dataloader,
                                            validation_dataloader,
                                            doc_start_ind,
                                            index_to_label,
                                            device)
         test_generate(fine_model, fine_tokenizer, children, pad_token_dict, device)
-        true, preds = test(fine_model, fine_posterior, test_dataloader, doc_start_ind, index_to_label, device)
+        true, preds = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
+                           index_to_label, label_to_index, list(temp_df.label.values), device)
         all_true += true
         all_preds += preds
 
-        # todo save these at right location
-        fine_tokenizer.save_pretrained(tok_path)
-        torch.save(fine_model, model_path + model_name)
+        fine_tok_path = base_fine_tok_path + "/" + p
+        os.makedirs(fine_tok_path, exist_ok=True)
+        fine_tokenizer.save_pretrained(fine_tok_path)
+        torch.save(fine_model, model_path + p + ".pt")
+
+        print("*" * 80)
 
     print(classification_report(all_true, all_preds), flush=True)
     print("*" * 80, flush=True)
