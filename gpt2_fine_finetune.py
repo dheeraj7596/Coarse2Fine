@@ -111,11 +111,11 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                     num_return_sequences=1
                 )
                 for i, sample_output in enumerate(sample_outputs):
-                    print("{}: {}".format(i, fine_tokenizer.decode(sample_output)))
+                    print("{}: {}".format(i, fine_tokenizer.decode(sample_output)), flush=True)
                 fine_model.train()
 
             fine_posterior_probs = torch.softmax(fine_posterior, dim=0)
-            print(fine_posterior_probs)
+            print(fine_posterior_probs, flush=True)
 
             b_coarse_input_ids = batch[0].to(device)
             b_coarse_labels = batch[0].to(device)
@@ -157,7 +157,7 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
 
             loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach())
             total_train_loss += loss.item()
-            print("Loss:", loss.item())
+            print("Loss:", loss.item(), flush=True)
 
             loss.backward()
             optimizer.step()
