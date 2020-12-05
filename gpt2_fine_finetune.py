@@ -25,11 +25,12 @@ def gpt2_fine_tokenize(tokenizer, df, index_to_label, pad_token_dict, max_length
         sibling_attn_masks = []
         for ind_l in index_to_label:
             label = index_to_label[ind_l]
+            processed_label_str = " ".join(label.split("_"))
             temp_list = ["<|labelpad|>"] * pad_token_dict[label]
             if len(temp_list) > 0:
-                label_str = label + " " + " ".join(temp_list)
+                label_str = processed_label_str + " " + " ".join(temp_list)
             else:
-                label_str = label
+                label_str = processed_label_str
             encoded_dict = tokenizer.encode_plus(
                 label_str + " <|labelsep|> " + sent,  # Sentence to encode.
                 truncation=True,
