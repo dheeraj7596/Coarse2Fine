@@ -71,10 +71,10 @@ if __name__ == "__main__":
         fine_model.eval()
         for batch in prediction_dataloader:
             # batch contains -> fine_input_ids, fine_attention_masks, fine_grained_labels
-            b_size = batch_size
             b_fine_input_ids_minibatch = batch[0].to(device)
             b_fine_input_mask_minibatch = batch[1].to(device)
             b_cls_labels = batch[2].to(device)
+            b_size = b_fine_input_ids_minibatch.shape[0]
 
             with torch.no_grad():
                 fine_posterior_log_probs = torch.log_softmax(fine_posterior, dim=0)
