@@ -444,7 +444,7 @@ if __name__ == "__main__":
         all_preds += preds
 
         fine_label_path = base_fine_path + p
-        os.makedirs(fine_label_path)
+        os.makedirs(fine_label_path, exist_ok=True)
         fine_tok_path = fine_label_path + "/tokenizer"
         fine_model_path = fine_label_path + "/model/"
         os.makedirs(fine_tok_path, exist_ok=True)
