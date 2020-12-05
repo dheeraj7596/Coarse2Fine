@@ -97,7 +97,6 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
 
         for step, batch in enumerate(train_dataloader):
             # batch contains -> coarse_input_ids, coarse_attention_masks, fine_input_ids, fine_attention_masks
-            # todo write what to do if step%sample_every case
             if step % sample_every == 0 and not step == 0:
                 elapsed = format_time(time.time() - t0)
                 print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed),
@@ -127,6 +126,9 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
             b_fine_input_ids_minibatch = batch[2].to(device)
             b_fine_input_mask_minibatch = batch[3].to(device)
 
+            coarse_model.zero_grad()
+            fine_model.zero_grad()
+
             outputs = coarse_model(b_coarse_input_ids,
                                    token_type_ids=None,
                                    attention_mask=b_coarse_input_mask,
@@ -150,7 +152,7 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                                          labels=b_fine_labels)
                     fine_logits = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
                     fine_probs = fine_logits.gather(2, b_fine_labels[:, doc_start_ind:].unsqueeze(dim=-1)).squeeze(
-                        dim=-1).squeeze(dim=0)
+                        dim=-1)
                     temp += fine_probs * fine_posterior_probs[l_ind]
                 batch_fine_probs.append(temp + epsilon)
 
@@ -228,7 +230,7 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                                              labels=b_fine_labels)
                         fine_logits = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
                         fine_probs = fine_logits.gather(2, b_fine_labels[:, doc_start_ind:].unsqueeze(dim=-1)).squeeze(
-                            dim=-1).squeeze(dim=0)
+                            dim=-1)
                         temp += fine_probs * fine_posterior_probs[l_ind]
                     batch_fine_probs.append(temp + epsilon)
 
