@@ -326,11 +326,10 @@ def test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_s
                                          attention_mask=b_fine_input_mask,
                                          labels=b_fine_labels)
                     fine_logits = torch.log_softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
-                    fine_log_probs = fine_logits.gather(2,
-                                                            b_fine_labels[:, doc_start_ind:].unsqueeze(dim=-1)).squeeze(
+                    fine_log_probs = fine_logits.gather(2, b_fine_labels[:, doc_start_ind:].unsqueeze(dim=-1)).squeeze(
                         dim=-1).squeeze(dim=0)
                     label_log_probs.append(fine_posterior_log_probs[l_ind] + fine_log_probs.sum())
-                label_log_probs = torch.tensor(label_log_probs)
+                label_log_probs = torch.tensor(label_log_probs).unsqueeze(0)
                 batch_fine_logits.append(label_log_probs)
 
             batch_fine_logits = torch.cat(batch_fine_logits, dim=0)
@@ -361,7 +360,7 @@ if __name__ == "__main__":
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
 
-    base_fine_tok_path = pkl_dump_dir + "gpt2/tokenizer_fine/"
+    base_fine_path = pkl_dump_dir + "gpt2/fine/"
 
     coarse_tok_path = pkl_dump_dir + "gpt2/tokenizer_coarse"
     model_path = pkl_dump_dir + "gpt2/model/"
@@ -441,10 +440,17 @@ if __name__ == "__main__":
         all_true += true
         all_preds += preds
 
-        fine_tok_path = base_fine_tok_path + "/" + p
+        fine_label_path = base_fine_path + p
+        os.makedirs(fine_label_path)
+        fine_tok_path = fine_label_path + "/tokenizer"
+        fine_model_path = fine_label_path + "/model/"
         os.makedirs(fine_tok_path, exist_ok=True)
+        os.makedirs(fine_model_path, exist_ok=True)
+
         fine_tokenizer.save_pretrained(fine_tok_path)
-        torch.save(fine_model, model_path + p + ".pt")
+        torch.save(fine_model, fine_model_path + p + ".pt")
+        torch.save(fine_posterior, fine_label_path + "/fine_posterior.pt")
+        pickle.dump(index_to_label, open(fine_label_path + "/index_to_label.pkl", "wb"))
 
         print("*" * 80)
 
