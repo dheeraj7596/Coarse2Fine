@@ -102,8 +102,15 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                 print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed),
                       flush=True)
                 fine_model.eval()
+                lbl = random.choice(list(index_to_label.values()))
+                temp_list = ["<|labelpad|>"] * pad_token_dict[lbl]
+                if len(temp_list) > 0:
+                    label_str = " ".join(lbl.split("_")) + " " + " ".join(temp_list)
+                else:
+                    label_str = " ".join(lbl.split("_"))
+                text = fine_tokenizer.bos_token + " " + label_str + " <|labelsep|> "
                 sample_outputs = fine_model.generate(
-                    bos_token_id=fine_tokenizer.bos_token_id,
+                    input_ids=fine_tokenizer.encode(text, return_tensors='pt').to(device),
                     do_sample=True,
                     top_k=50,
                     max_length=200,
