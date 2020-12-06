@@ -68,7 +68,7 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                       lr=5e-4,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8.
                       )
-    criterion = torch.nn.KLDivLoss(size_average=False)
+    criterion = torch.nn.KLDivLoss(reduction="none")
     sample_every = 100
     warmup_steps = 1e2
     epochs = 5
@@ -134,9 +134,7 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                                    attention_mask=b_coarse_input_mask,
                                    labels=b_coarse_labels)
 
-            coarse_logits = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
-            batch_coarse_probs = coarse_logits.gather(2, b_coarse_labels[:, doc_start_ind:].unsqueeze(dim=-1)).squeeze(
-                dim=-1)
+            batch_coarse_probs = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
 
             batch_fine_probs = []
             for b_ind in range(b_size):
@@ -150,15 +148,13 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                                          token_type_ids=None,
                                          attention_mask=b_fine_input_mask,
                                          labels=b_fine_labels)
-                    fine_logits = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
-                    fine_probs = fine_logits.gather(2, b_fine_labels[:, doc_start_ind:].unsqueeze(dim=-1)).squeeze(
-                        dim=-1)
+                    fine_probs = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
                     temp += fine_probs * fine_posterior_probs[l_ind]
                 batch_fine_probs.append(temp + epsilon)
 
             batch_fine_probs = torch.cat(batch_fine_probs, dim=0)
 
-            loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach())
+            loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
             print("Loss:", loss.item(), flush=True)
 
@@ -211,10 +207,7 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                                        attention_mask=b_coarse_input_mask,
                                        labels=b_coarse_labels)
 
-                coarse_logits = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
-                batch_coarse_probs = coarse_logits.gather(2,
-                                                          b_coarse_labels[:, doc_start_ind:].unsqueeze(dim=-1)).squeeze(
-                    dim=-1)
+                batch_coarse_probs = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
 
                 batch_fine_probs = []
                 for b_ind in range(b_size):
@@ -228,16 +221,14 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                                              token_type_ids=None,
                                              attention_mask=b_fine_input_mask,
                                              labels=b_fine_labels)
-                        fine_logits = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
-                        fine_probs = fine_logits.gather(2, b_fine_labels[:, doc_start_ind:].unsqueeze(dim=-1)).squeeze(
-                            dim=-1)
+                        fine_probs = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
                         temp += fine_probs * fine_posterior_probs[l_ind]
                     batch_fine_probs.append(temp + epsilon)
 
                 batch_fine_probs = torch.cat(batch_fine_probs, dim=0)
 
             # Accumulate the validation loss.
-            loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach())
+            loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
