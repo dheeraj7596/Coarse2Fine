@@ -280,13 +280,10 @@ if __name__ == "__main__":
     for p in parent_to_child:
         children = parent_to_child[p]
         parent_tokens = tokenizer.tokenize(p)
-        max_num = -1
+        max_num = len(parent_tokens)
         for ch in children:
             max_num = max(len(tokenizer.tokenize(" ".join(ch.split("_")))), max_num)
-        if len(parent_tokens) >= max_num:
-            pad_token_dict[p] = 0
-        else:
-            pad_token_dict[p] = max_num - len(parent_tokens)
+        pad_token_dict[p] = max_num - len(parent_tokens)
 
     # tokenizer.convert_ids_to_tokens(tokenizer.convert_tokens_to_ids(tokenizer.tokenize("<|startoftext|> sports <|labelsep|> Hello, my dog is cute <|endoftext|>")))
 

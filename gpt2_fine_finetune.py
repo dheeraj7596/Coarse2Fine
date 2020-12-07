@@ -269,19 +269,13 @@ def create_pad_token_dict(p, parent_to_child, coarse_tokenizer, fine_tokenizer):
     pad_token_dict = {}
     children = parent_to_child[p]
     parent_tokens = coarse_tokenizer.tokenize(p)
-    max_num = -1
+    max_num = len(parent_tokens)
     for ch in children:
         max_num = max(len(fine_tokenizer.tokenize(" ".join(ch.split("_")))), max_num)
-    if len(parent_tokens) >= max_num:
-        pad_token_dict[p] = 0
-    else:
-        pad_token_dict[p] = max_num - len(parent_tokens)
+    pad_token_dict[p] = max_num - len(parent_tokens)
     for ch in children:
         ch_tokens = len(fine_tokenizer.tokenize(" ".join(ch.split("_"))))
-        if ch_tokens >= max_num:
-            pad_token_dict[ch] = 0
-        else:
-            pad_token_dict[ch] = max_num - ch_tokens
+        pad_token_dict[ch] = max_num - ch_tokens
     doc_start_ind = 1 + max_num + 1  # this gives the token from which the document starts in the inputids, 1 for the starttoken, max_num for label infor, 1 for label_sup
     return doc_start_ind, pad_token_dict
 
