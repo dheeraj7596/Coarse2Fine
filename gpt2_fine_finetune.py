@@ -320,9 +320,18 @@ def test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_s
                                          token_type_ids=None,
                                          attention_mask=b_fine_input_mask,
                                          labels=b_fine_labels)
-                    fine_logits = torch.log_softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
-                    fine_log_probs = fine_logits.gather(2, b_fine_labels[:, doc_start_ind:].unsqueeze(dim=-1)).squeeze(
-                        dim=-1).squeeze(dim=0)
+                    mask = b_fine_input_mask > 0
+
+                    fine_logits = torch.log_softmax(outputs[1], dim=-1)
+                    maski = mask.unsqueeze(-1).expand_as(fine_logits)
+                    fine_logits_pad_removed = torch.masked_select(fine_logits, maski).view(-1, fine_logits.size(
+                        -1)).unsqueeze(0)
+                    fine_logits_pad_removed = fine_logits_pad_removed[:, doc_start_ind - 1:-1, :]
+
+                    b_fine_labels_pad_removed = torch.masked_select(b_fine_labels, mask).unsqueeze(0)
+                    b_fine_labels_pad_removed = b_fine_labels_pad_removed[:, doc_start_ind:]
+                    fine_log_probs = fine_logits_pad_removed.gather(2, b_fine_labels_pad_removed.unsqueeze(
+                        dim=-1)).squeeze(dim=-1).squeeze(dim=0)
                     label_log_probs.append(fine_posterior_log_probs[l_ind] + fine_log_probs.sum())
                 label_log_probs = torch.tensor(label_log_probs).unsqueeze(0)
                 batch_fine_logits.append(label_log_probs)
