@@ -95,7 +95,8 @@ def create_data_loaders(dataset, batch_size):
     return train_dataloader, validation_dataloader
 
 
-def train(model, tokenizer, train_dataloader, validation_dataloader, index_to_label, doc_start_ind_dict, device):
+def train(model, tokenizer, train_dataloader, validation_dataloader, index_to_label, pad_token_dict, doc_start_ind_dict,
+          device):
     def calculate_loss(lm_logits, b_labels, b_input_mask, cls_labels, index_to_label, doc_start_ind_dict, loss_fct):
         batch_size = lm_logits.shape[0]
         logits_collected = []
@@ -157,8 +158,15 @@ def train(model, tokenizer, train_dataloader, validation_dataloader, index_to_la
                 print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed),
                       flush=True)
                 model.eval()
+                lbl = random.choice(list(index_to_label.values()))
+                temp_list = ["<|labelpad|>"] * pad_token_dict[lbl]
+                if len(temp_list) > 0:
+                    label_str = " ".join(lbl.split("_")) + " " + " ".join(temp_list)
+                else:
+                    label_str = " ".join(lbl.split("_"))
+                text = tokenizer.bos_token + " " + label_str + " <|labelsep|> "
                 sample_outputs = model.generate(
-                    bos_token_id=tokenizer.bos_token_id,
+                    bos_token_id=tokenizer.encode(text, return_tensors='pt').to(device),
                     do_sample=True,
                     top_k=50,
                     max_length=200,
@@ -346,7 +354,8 @@ if __name__ == "__main__":
     # Create a 90-10 train-validation split.
     train_dataloader, validation_dataloader = create_data_loaders(dataset, batch_size=4)
 
-    model = train(model, tokenizer, train_dataloader, validation_dataloader, index_to_label, doc_start_ind_dict, device)
+    model = train(model, tokenizer, train_dataloader, validation_dataloader, index_to_label, pad_token_dict,
+                  doc_start_ind_dict, device)
     test_generate(model, tokenizer, label_set, pad_token_dict, device)
 
     tokenizer.save_pretrained(tok_path)
