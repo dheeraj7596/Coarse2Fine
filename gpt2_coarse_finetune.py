@@ -2,6 +2,7 @@ import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel, get_linear_schedule_with_warmup, AdamW
 from torch.utils.data import TensorDataset, random_split
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+from torch.nn import CrossEntropyLoss
 import os
 import pickle
 import sys
@@ -9,6 +10,7 @@ import numpy as np
 import random
 import time
 import datetime
+import copy
 
 
 def format_time(elapsed):
@@ -22,15 +24,19 @@ def format_time(elapsed):
     return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
-def gpt2_tokenize(tokenizer, df, pad_token_dict, max_length=768):
+def gpt2_tokenize(tokenizer, df, pad_token_dict, label_to_index, max_length=768):
     input_ids = []
     attention_masks = []
     # For every sentence...
     sentences = df.text.values
-    labels = df.label.values
+    label_strs = df.label.values
+    labels = copy.deepcopy(df.label.values)
+    for i, l in enumerate(list(labels)):
+        labels[i] = label_to_index[l]
+    labels = np.array(labels, dtype='int32')
 
     for i, sent in enumerate(sentences):
-        label = labels[i]
+        label = label_strs[i]
         temp_list = ["<|labelpad|>"] * pad_token_dict[label]
         if len(temp_list) > 0:
             label_str = label + " " + " ".join(temp_list)
@@ -39,17 +45,17 @@ def gpt2_tokenize(tokenizer, df, pad_token_dict, max_length=768):
         encoded_dict = tokenizer.encode_plus(
             label_str + " <|labelsep|> " + sent,  # Sentence to encode.
             truncation=True,
-            max_length=max_length - 2,  # Pad & truncate all sentences.
+            max_length=max_length - 1,  # Pad & truncate all sentences.
             pad_to_max_length=True,
             return_attention_mask=True,  # Construct attn. masks.
             return_tensors='pt',  # Return pytorch tensors.
         )
 
         encoded_dict['input_ids'] = torch.tensor(
-            [[tokenizer.bos_token_id] + encoded_dict['input_ids'].data.tolist()[0] + [tokenizer.eos_token_id]]
+            [[tokenizer.bos_token_id] + encoded_dict['input_ids'].data.tolist()[0]]
         )
         encoded_dict['attention_mask'] = torch.tensor(
-            [[1] + encoded_dict['attention_mask'].data.tolist()[0] + [1]]
+            [[1] + encoded_dict['attention_mask'].data.tolist()[0]]
         )
         # Add the encoded sentence to the list.
         input_ids.append(encoded_dict['input_ids'])
@@ -59,8 +65,9 @@ def gpt2_tokenize(tokenizer, df, pad_token_dict, max_length=768):
     # Convert the lists into tensors.
     input_ids = torch.cat(input_ids, dim=0)
     attention_masks = torch.cat(attention_masks, dim=0)
+    labels = torch.LongTensor(labels)
 
-    return input_ids, attention_masks
+    return input_ids, attention_masks, labels
 
 
 def create_data_loaders(dataset, batch_size):
@@ -88,12 +95,38 @@ def create_data_loaders(dataset, batch_size):
     return train_dataloader, validation_dataloader
 
 
-def train(model, tokenizer, train_dataloader, validation_dataloader, device):
+def train(model, tokenizer, train_dataloader, validation_dataloader, index_to_label, doc_start_ind_dict, device):
+    def calculate_loss(lm_logits, b_labels, b_input_mask, cls_labels, index_to_label, doc_start_ind_dict, loss_fct):
+        batch_size = lm_logits.shape[0]
+        logits_collected = []
+        labels_collected = []
+        for b in range(batch_size):
+            logits_ind = lm_logits[b, :, :]  # seq_len x |V|
+            labels_ind = b_labels[b, :]  # seq_len
+            mask = b_input_mask[b, :] > 0
+            maski = mask.unsqueeze(-1).expand_as(logits_ind)
+            # unpad_seq_len x |V|
+            logits_pad_removed = torch.masked_select(logits_ind, maski).view(-1, logits_ind.size(-1))
+            labels_pad_removed = torch.masked_select(labels_ind, mask)  # unpad_seq_len
+
+            doc_start_ind = doc_start_ind_dict[index_to_label[cls_labels[b].item()]]
+            shift_logits = logits_pad_removed[doc_start_ind - 1:-1, :].contiguous()
+            shift_labels = labels_pad_removed[doc_start_ind:].contiguous()
+            # Flatten the tokens
+            logits_collected.append(shift_logits.view(-1, shift_logits.size(-1)))
+            labels_collected.append(shift_labels.view(-1))
+
+        logits_collected = torch.cat(logits_collected, dim=0)
+        labels_collected = torch.cat(labels_collected, dim=0)
+        loss = loss_fct(logits_collected, labels_collected)
+        return loss
+
     optimizer = AdamW(model.parameters(),
                       lr=5e-4,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8.
                       )
 
+    loss_fct = CrossEntropyLoss()
     sample_every = 100
     warmup_steps = 1e2
     epochs = 5
@@ -139,6 +172,7 @@ def train(model, tokenizer, train_dataloader, validation_dataloader, device):
             b_input_ids = batch[0].to(device)
             b_labels = batch[0].to(device)
             b_input_mask = batch[1].to(device)
+            cls_labels = batch[2].to(device)
 
             model.zero_grad()
 
@@ -147,7 +181,9 @@ def train(model, tokenizer, train_dataloader, validation_dataloader, device):
                             attention_mask=b_input_mask,
                             labels=b_labels)
 
-            loss = outputs[0]
+            loss = calculate_loss(outputs[1], b_labels, b_input_mask, cls_labels, index_to_label, doc_start_ind_dict,
+                                  loss_fct)
+            # loss = outputs[0]
             total_train_loss += loss.item()
 
             loss.backward()
@@ -185,6 +221,7 @@ def train(model, tokenizer, train_dataloader, validation_dataloader, device):
             b_input_ids = batch[0].to(device)
             b_input_mask = batch[1].to(device)
             b_labels = batch[0].to(device)
+            cls_labels = batch[2].to(device)
 
             with torch.no_grad():
                 outputs = model(b_input_ids,
@@ -193,7 +230,9 @@ def train(model, tokenizer, train_dataloader, validation_dataloader, device):
                                 labels=b_labels)
 
             # Accumulate the validation loss.
-            loss = outputs[0]
+            loss = calculate_loss(outputs[1], b_labels, b_input_mask, cls_labels, index_to_label, doc_start_ind_dict,
+                                  loss_fct)
+            # loss = outputs[0]
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
@@ -250,7 +289,6 @@ if __name__ == "__main__":
     basepath = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
-    # glove_dir = "/Users/dheerajmekala/Work/metaguide/data/glove.6B"
 
     tok_path = pkl_dump_dir + "gpt2/tokenizer_coarse"
     model_path = pkl_dump_dir + "gpt2/model/"
@@ -272,11 +310,11 @@ if __name__ == "__main__":
     df = pickle.load(open(pkl_dump_dir + "df_coarse.pkl", "rb"))
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
 
-    tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token='<|startoftext|>', eos_token='<|endoftext|>',
-                                              pad_token='<|pad|>',
+    tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token='<|startoftext|>', pad_token='<|pad|>',
                                               additional_special_tokens=['<|labelsep|>', '<|labelpad|>'])
 
     pad_token_dict = {}
+    doc_start_ind_dict = {}
     for p in parent_to_child:
         children = parent_to_child[p]
         parent_tokens = tokenizer.tokenize(p)
@@ -284,6 +322,8 @@ if __name__ == "__main__":
         for ch in children:
             max_num = max(len(tokenizer.tokenize(" ".join(ch.split("_")))), max_num)
         pad_token_dict[p] = max_num - len(parent_tokens)
+        doc_start_ind_dict[p] = 1 + max_num + 1
+        # this gives the token from which the document starts in the inputids, 1 for the starttoken, max_num for label infor, 1 for label_sup
 
     # tokenizer.convert_ids_to_tokens(tokenizer.convert_tokens_to_ids(tokenizer.tokenize("<|startoftext|> sports <|labelsep|> Hello, my dog is cute <|endoftext|>")))
 
@@ -298,15 +338,15 @@ if __name__ == "__main__":
         label_to_index[l] = i
         index_to_label[i] = l
 
-    input_ids, attention_masks = gpt2_tokenize(tokenizer, df, pad_token_dict)
+    input_ids, attention_masks, labels = gpt2_tokenize(tokenizer, df, pad_token_dict, label_to_index)
 
     # Combine the training inputs into a TensorDataset.
-    dataset = TensorDataset(input_ids, attention_masks)
+    dataset = TensorDataset(input_ids, attention_masks, labels)
 
     # Create a 90-10 train-validation split.
     train_dataloader, validation_dataloader = create_data_loaders(dataset, batch_size=4)
 
-    model = train(model, tokenizer, train_dataloader, validation_dataloader, device)
+    model = train(model, tokenizer, train_dataloader, validation_dataloader, index_to_label, doc_start_ind_dict, device)
     test_generate(model, tokenizer, label_set, pad_token_dict, device)
 
     tokenizer.save_pretrained(tok_path)
