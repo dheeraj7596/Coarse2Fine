@@ -166,7 +166,7 @@ def train(model, tokenizer, train_dataloader, validation_dataloader, index_to_la
                     label_str = " ".join(lbl.split("_"))
                 text = tokenizer.bos_token + " " + label_str + " <|labelsep|> "
                 sample_outputs = model.generate(
-                    bos_token_id=tokenizer.encode(text, return_tensors='pt').to(device),
+                    input_ids=tokenizer.encode(text, return_tensors='pt').to(device),
                     do_sample=True,
                     top_k=50,
                     max_length=200,
@@ -174,7 +174,7 @@ def train(model, tokenizer, train_dataloader, validation_dataloader, index_to_la
                     num_return_sequences=1
                 )
                 for i, sample_output in enumerate(sample_outputs):
-                    print("{}: {}".format(i, tokenizer.decode(sample_output)))
+                    print("{}: {}".format(i, tokenizer.decode(sample_output)), flush=True)
                 model.train()
 
             b_input_ids = batch[0].to(device)
