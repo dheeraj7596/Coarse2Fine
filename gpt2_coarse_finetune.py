@@ -24,13 +24,11 @@ def format_time(elapsed):
     return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
-def gpt2_tokenize(tokenizer, df, pad_token_dict, label_to_index, max_length=768):
+def gpt2_tokenize(tokenizer, sentences, label_strs, pad_token_dict, label_to_index, max_length=768):
     input_ids = []
     attention_masks = []
     # For every sentence...
-    sentences = df.text.values
-    label_strs = df.label.values
-    labels = copy.deepcopy(df.label.values)
+    labels = copy.deepcopy(label_strs)
     for i, l in enumerate(list(labels)):
         labels[i] = label_to_index[l]
     labels = np.array(labels, dtype='int32')
@@ -346,7 +344,8 @@ if __name__ == "__main__":
         label_to_index[l] = i
         index_to_label[i] = l
 
-    input_ids, attention_masks, labels = gpt2_tokenize(tokenizer, df, pad_token_dict, label_to_index)
+    input_ids, attention_masks, labels = gpt2_tokenize(tokenizer, df.text.values, df.label.values, pad_token_dict,
+                                                       label_to_index)
 
     # Combine the training inputs into a TensorDataset.
     dataset = TensorDataset(input_ids, attention_masks, labels)
