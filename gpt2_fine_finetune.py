@@ -34,16 +34,16 @@ def gpt2_fine_tokenize(tokenizer, df, index_to_label, pad_token_dict, max_length
             encoded_dict = tokenizer.encode_plus(
                 label_str + " <|labelsep|> " + sent,  # Sentence to encode.
                 truncation=True,
-                max_length=max_length - 2,  # Pad & truncate all sentences.
+                max_length=max_length - 1,  # Pad & truncate all sentences.
                 pad_to_max_length=True,
                 return_attention_mask=True,  # Construct attn. masks.
                 return_tensors='pt',  # Return pytorch tensors.
             )
             encoded_dict['input_ids'] = torch.tensor(
-                [[tokenizer.bos_token_id] + encoded_dict['input_ids'].data.tolist()[0] + [tokenizer.eos_token_id]]
+                [[tokenizer.bos_token_id] + encoded_dict['input_ids'].data.tolist()[0]]
             )
             encoded_dict['attention_mask'] = torch.tensor(
-                [[1] + encoded_dict['attention_mask'].data.tolist()[0] + [1]]
+                [[1] + encoded_dict['attention_mask'].data.tolist()[0]]
             )
             sibling_input_ids.append(encoded_dict['input_ids'])
             sibling_attn_masks.append(encoded_dict['attention_mask'])
@@ -62,13 +62,43 @@ def gpt2_fine_tokenize(tokenizer, df, index_to_label, pad_token_dict, max_length
 
 def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation_dataloader, doc_start_ind,
           index_to_label, device):
-    epsilon = 1e-20  # Defined to avoid log probability getting undefined.
+    def calculate_loss(batch_fine_probs, batch_coarse_probs, batch_fine_input_masks, batch_coarse_input_masks,
+                       doc_start_ind, loss_fct):
+        # Remove pad tokens
+        # consider from doc_start_ind - 1
+        batch_size = batch_fine_probs.shape[0]
+        losses = []
+        for b in range(batch_size):
+            fine_logits_ind = batch_fine_probs[b, :, :]  # seq_len x |V|
+            coarse_logits_ind = batch_coarse_probs[b, :, :]  # seq_len x |V|
+            fine_mask = batch_fine_input_masks[b, :] > 0
+            coarse_mask = batch_coarse_input_masks[b, :] > 0
+            assert torch.all(fine_mask.eq(coarse_mask))
+            fine_maski = fine_mask.unsqueeze(-1).expand_as(fine_logits_ind)
+            coarse_maski = coarse_mask.unsqueeze(-1).expand_as(coarse_logits_ind)
+            # unpad_seq_len x |V|
+            fine_logits_pad_removed = torch.masked_select(fine_logits_ind, fine_maski).view(-1,
+                                                                                            fine_logits_ind.size(-1))
+            coarse_logits_pad_removed = torch.masked_select(coarse_logits_ind, coarse_maski).view(-1,
+                                                                                                  coarse_logits_ind.size(
+                                                                                                      -1))
+            shift_fine_logits = fine_logits_pad_removed[doc_start_ind - 1:-1, :].contiguous()
+            shift_coarse_logits = coarse_logits_pad_removed[doc_start_ind - 1:-1, :].contiguous()
+            # Compute loss here of shift_fine_logits and shift_coarse_logits append to losses
+            loss = loss_fct(shift_fine_logits, shift_coarse_logits).unsqueeze(0)
+            losses.append(loss)
+
+        # Return mean of losses here
+        losses = torch.cat(losses, dim=0)
+        return losses.mean()
+
+    # epsilon = 1e-20  # Defined to avoid log probability getting undefined.
     fine_posterior = torch.nn.Parameter(torch.ones(len(index_to_label)).to(device))
     optimizer = AdamW(list(fine_model.parameters()) + [fine_posterior],
                       lr=5e-4,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8.
                       )
-    criterion = torch.nn.KLDivLoss(reduction="none")
+    loss_fct = torch.nn.KLDivLoss(reduction="batchmean")
     sample_every = 100
     warmup_steps = 1e2
     epochs = 5
@@ -121,8 +151,8 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                     print("{}: {}".format(i, fine_tokenizer.decode(sample_output)), flush=True)
                 fine_model.train()
 
-            fine_posterior_probs = torch.softmax(fine_posterior, dim=0)
-            print(fine_posterior_probs, flush=True)
+            fine_posterior_log_probs = torch.log_softmax(fine_posterior, dim=0)
+            print(torch.softmax(fine_posterior, dim=0), flush=True)
 
             b_coarse_input_ids = batch[0].to(device)
             b_coarse_labels = batch[0].to(device)
@@ -141,11 +171,12 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                                    attention_mask=b_coarse_input_mask,
                                    labels=b_coarse_labels)
 
-            batch_coarse_probs = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
+            batch_coarse_probs = torch.softmax(outputs[1], dim=-1)  # (b_size, seq_len, |V|)
 
             batch_fine_probs = []
+            batch_fine_input_masks = []
             for b_ind in range(b_size):
-                temp = 0
+                fine_label_sum_log_probs = []
                 for l_ind in index_to_label:
                     b_fine_input_ids = b_fine_input_ids_minibatch[b_ind, l_ind, :].unsqueeze(0).to(device)
                     b_fine_labels = b_fine_input_ids_minibatch[b_ind, l_ind, :].unsqueeze(0).to(device)
@@ -155,13 +186,20 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                                          token_type_ids=None,
                                          attention_mask=b_fine_input_mask,
                                          labels=b_fine_labels)
-                    fine_probs = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
-                    temp += fine_probs * fine_posterior_probs[l_ind]
-                batch_fine_probs.append(temp + epsilon)
+                    fine_log_probs = torch.log_softmax(outputs[1], dim=-1)
+                    fine_label_sum_log_probs.append((fine_log_probs + fine_posterior_log_probs[l_ind]))
 
-            batch_fine_probs = torch.cat(batch_fine_probs, dim=0)
+                fine_label_sum_log_probs = torch.cat(fine_label_sum_log_probs, dim=0)  # (|F|, seq_len, |V|)
+                batch_fine_probs.append(fine_label_sum_log_probs.unsqueeze(0))
+                batch_fine_input_masks.append(b_fine_input_mask)
 
-            loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
+            batch_fine_probs = torch.cat(batch_fine_probs, dim=0)  # (b_size, |F|, seq_len, |V|)
+            batch_fine_input_masks = torch.cat(batch_fine_input_masks, dim=0)  # (b_size, seq_len)
+            batch_fine_log_probs = torch.logsumexp(batch_fine_probs, dim=1)  # This computes logsum_i P(f_i|c) P(D|f_i)
+
+            loss = calculate_loss(batch_fine_log_probs, batch_coarse_probs, batch_fine_input_masks, b_coarse_input_mask,
+                                  doc_start_ind, loss_fct)
+            # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
             print("Loss:", loss.item(), flush=True)
 
@@ -208,17 +246,18 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
             b_fine_input_mask_minibatch = batch[3].to(device)
 
             with torch.no_grad():
-                fine_posterior_probs = torch.softmax(fine_posterior, dim=0)
+                fine_posterior_log_probs = torch.log_softmax(fine_posterior, dim=0)
                 outputs = coarse_model(b_coarse_input_ids,
                                        token_type_ids=None,
                                        attention_mask=b_coarse_input_mask,
                                        labels=b_coarse_labels)
 
-                batch_coarse_probs = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
+                batch_coarse_probs = torch.softmax(outputs[1], dim=-1)  # (b_size, seq_len, |V|)
 
                 batch_fine_probs = []
+                batch_fine_input_masks = []
                 for b_ind in range(b_size):
-                    temp = 0
+                    fine_label_sum_log_probs = []
                     for l_ind in index_to_label:
                         b_fine_input_ids = b_fine_input_ids_minibatch[b_ind, l_ind, :].unsqueeze(0).to(device)
                         b_fine_labels = b_fine_input_ids_minibatch[b_ind, l_ind, :].unsqueeze(0).to(device)
@@ -228,14 +267,21 @@ def train(coarse_model, fine_model, fine_tokenizer, train_dataloader, validation
                                              token_type_ids=None,
                                              attention_mask=b_fine_input_mask,
                                              labels=b_fine_labels)
-                        fine_probs = torch.softmax(outputs[1], dim=-1)[:, doc_start_ind:, :]
-                        temp += fine_probs * fine_posterior_probs[l_ind]
-                    batch_fine_probs.append(temp + epsilon)
+                        fine_log_probs = torch.log_softmax(outputs[1], dim=-1)
+                        fine_label_sum_log_probs.append((fine_log_probs + fine_posterior_log_probs[l_ind]))
 
-                batch_fine_probs = torch.cat(batch_fine_probs, dim=0)
+                    fine_label_sum_log_probs = torch.cat(fine_label_sum_log_probs, dim=0)  # (|F|, seq_len, |V|)
+                    batch_fine_probs.append(fine_label_sum_log_probs.unsqueeze(0))
+                    batch_fine_input_masks.append(b_fine_input_mask)
+
+                batch_fine_probs = torch.cat(batch_fine_probs, dim=0)  # (b_size, |F|, seq_len, |V|)
+                batch_fine_input_masks = torch.cat(batch_fine_input_masks, dim=0)  # (b_size, seq_len)
+                batch_fine_log_probs = torch.logsumexp(batch_fine_probs,
+                                                       dim=1)  # This computes logsum_i P(f_i|c) P(D|f_i)
 
             # Accumulate the validation loss.
-            loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
+            loss = calculate_loss(batch_fine_log_probs, batch_coarse_probs, batch_fine_input_masks, b_coarse_input_mask,
+                                  doc_start_ind, loss_fct)
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
@@ -383,12 +429,6 @@ if __name__ == "__main__":
     df = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
 
-    sibling_map = {}
-    for p in parent_to_child:
-        children = parent_to_child[p]
-        for ch in children:
-            sibling_map[ch] = [l for l in children]
-
     fine_labels = list(set(df.label.values))
 
     coarse_tokenizer = GPT2Tokenizer.from_pretrained(coarse_tok_path, do_lower_case=True)
@@ -407,8 +447,7 @@ if __name__ == "__main__":
     all_preds = []
     for p in parent_to_child:
         print("Training coarse label:", p)
-        fine_tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token='<|startoftext|>', eos_token='<|endoftext|>',
-                                                       pad_token='<|pad|>',
+        fine_tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token='<|startoftext|>', pad_token='<|pad|>',
                                                        additional_special_tokens=['<|labelsep|>', '<|labelpad|>'])
         fine_model = GPT2LMHeadModel.from_pretrained('gpt2')
         fine_model.resize_token_embeddings(len(fine_tokenizer))
@@ -424,7 +463,8 @@ if __name__ == "__main__":
         doc_start_ind, pad_token_dict = create_pad_token_dict(p, parent_to_child, coarse_tokenizer, fine_tokenizer)
 
         temp_df = df[df.label.isin(children)].reset_index(drop=True)
-        coarse_input_ids, coarse_attention_masks = gpt2_tokenize(coarse_tokenizer, temp_df, pad_token_dict)
+        coarse_input_ids, coarse_attention_masks, _ = gpt2_tokenize(coarse_tokenizer, temp_df, pad_token_dict,
+                                                                    label_to_index)
         fine_input_ids, fine_attention_masks = gpt2_fine_tokenize(fine_tokenizer, temp_df, index_to_label,
                                                                   pad_token_dict)
         dataset = TensorDataset(coarse_input_ids, coarse_attention_masks, fine_input_ids, fine_attention_masks)
