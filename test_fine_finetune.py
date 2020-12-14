@@ -32,10 +32,12 @@ if __name__ == "__main__":
     df = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
 
-    threshold = 0.9
+    threshold = 0.7
 
     all_true = []
     all_preds = []
+    all_sub_true = []
+    all_sub_preds = []
     for p in parent_to_child:
         fine_label_path = base_fine_path + p
         fine_tok_path = fine_label_path + "/tokenizer"
@@ -57,8 +59,8 @@ if __name__ == "__main__":
 
         true, preds, scores = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
                                    index_to_label, label_to_index, list(temp_df.label.values), device)
-        # all_true += true
-        # all_preds += preds
+        all_true += true
+        all_preds += preds
 
         probs = torch.softmax(scores, dim=-1)
         max_probs, max_inds = probs.max(dim=-1)
@@ -71,11 +73,23 @@ if __name__ == "__main__":
                 sub_true.append(true[i])
                 sub_preds.append(preds[i])
 
-        all_true += sub_true
-        all_preds += sub_preds
+        print("Classification Report of True and Preds for", p)
+        print(classification_report(true, preds), flush=True)
+        print("*" * 80, flush=True)
 
+        print("Classification Report of Sub_True and Sub_Preds for", p)
+        print(classification_report(sub_true, sub_preds), flush=True)
+        print("*" * 80, flush=True)
+
+        all_sub_true += sub_true
+        all_sub_preds += sub_preds
+
+    print("Classification Report of All True and All Preds")
     print(classification_report(all_true, all_preds), flush=True)
-    print("*" * 80, flush=True)
+    print("#" * 80, flush=True)
+    print("Classification Report of All sub True and All sub Preds")
+    print(classification_report(all_sub_true, all_sub_preds), flush=True)
+    print("#" * 80, flush=True)
     # true_labels = list(temp_df.label.values)
     # # Set the batch size.
     # batch_size = 2

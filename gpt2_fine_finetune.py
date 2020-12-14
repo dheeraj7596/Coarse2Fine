@@ -392,7 +392,7 @@ def test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_s
                     b_fine_labels_pad_removed = b_fine_labels_pad_removed[:, doc_start_ind:]
                     fine_log_probs = fine_logits_pad_removed.gather(2, b_fine_labels_pad_removed.unsqueeze(
                         dim=-1)).squeeze(dim=-1).squeeze(dim=0)
-                    label_log_probs.append(fine_posterior_log_probs[l_ind] + fine_log_probs.sum())
+                    label_log_probs.append((fine_posterior_log_probs[l_ind] + fine_log_probs).sum())
                 label_log_probs = torch.tensor(label_log_probs).unsqueeze(0)
                 batch_fine_logits.append(label_log_probs)
 
