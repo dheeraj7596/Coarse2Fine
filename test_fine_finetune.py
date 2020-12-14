@@ -61,13 +61,13 @@ if __name__ == "__main__":
         # all_preds += preds
 
         probs = torch.softmax(scores, dim=-1)
-        max_probs = probs.max(dim=-1)
-        b_size = max_probs.shape[0]
+        max_probs, max_inds = probs.max(dim=-1)
+        b_size = probs.shape[0]
 
         sub_true = []
         sub_preds = []
         for i in range(b_size):
-            if probs[i, :].item() >= threshold:
+            if max_probs[i].item() >= threshold:
                 sub_true.append(true[i])
                 sub_preds.append(preds[i])
 
