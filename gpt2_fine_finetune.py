@@ -356,6 +356,7 @@ def test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_s
 
     # Tracking variables
     predictions, true_labels = [], []
+    logits = []
 
     fine_model.eval()
     for batch in prediction_dataloader:
@@ -397,9 +398,12 @@ def test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_s
 
             batch_fine_logits = torch.cat(batch_fine_logits, dim=0)
 
+        logits.append(batch_fine_logits)
         predictions.append(batch_fine_logits.detach().cpu().numpy())
         label_ids = b_cls_labels.to('cpu').numpy()
         true_labels.append(label_ids)
+
+    logits = torch.cat(logits, dim=0)
 
     preds = []
     for pred in predictions:
@@ -414,7 +418,7 @@ def test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_s
         preds[i] = index_to_label[preds[i]]
 
     print(classification_report(true, preds), flush=True)
-    return true, preds
+    return true, preds, logits
 
 
 if __name__ == "__main__":
@@ -497,8 +501,8 @@ if __name__ == "__main__":
                                            index_to_label,
                                            device)
         test_generate(fine_model, fine_tokenizer, children, pad_token_dict, device)
-        true, preds = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
-                           index_to_label, label_to_index, list(temp_df.label.values), device)
+        true, preds, _ = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
+                              index_to_label, label_to_index, list(temp_df.label.values), device)
         all_true += true
         all_preds += preds
 

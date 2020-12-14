@@ -32,6 +32,8 @@ if __name__ == "__main__":
     df = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
 
+    threshold = 0.9
+
     all_true = []
     all_preds = []
     for p in parent_to_child:
@@ -53,10 +55,24 @@ if __name__ == "__main__":
         fine_input_ids, fine_attention_masks = gpt2_fine_tokenize(fine_tokenizer, temp_df, index_to_label,
                                                                   pad_token_dict)
 
-        true, preds = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
-                           index_to_label, label_to_index, list(temp_df.label.values), device)
-        all_true += true
-        all_preds += preds
+        true, preds, scores = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
+                                   index_to_label, label_to_index, list(temp_df.label.values), device)
+        # all_true += true
+        # all_preds += preds
+
+        probs = torch.softmax(scores, dim=-1)
+        max_probs = probs.max(dim=-1)
+        b_size = max_probs.shape[0]
+
+        sub_true = []
+        sub_preds = []
+        for i in range(b_size):
+            if probs[i, :].item() >= threshold:
+                sub_true.append(true[i])
+                sub_preds.append(preds[i])
+
+        all_true += sub_true
+        all_preds += sub_preds
 
     print(classification_report(all_true, all_preds), flush=True)
     print("*" * 80, flush=True)
