@@ -561,7 +561,7 @@ if __name__ == "__main__":
         label_to_exclusive_dataloader = {}
         for ch in children:
             ch_str = " ".join(ch.strip().split("_"))
-            child_df = pickle.load(open(exclusive_df_dir + ch_str + ".pkl", "rb"))
+            child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
             temp_child_lbls = [ch] * len(child_df.text.values)
             child_exc_input_ids, child_exc_attention_masks = basic_gpt2_tokenize(fine_tokenizer, child_df.text.values,
                                                                                  temp_child_lbls, pad_token_dict)
