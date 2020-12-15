@@ -3,9 +3,10 @@ import torch
 import pickle
 from transformers import GPT2Tokenizer, GPT2LMHeadModel, get_linear_schedule_with_warmup, AdamW
 from sklearn.metrics import classification_report
-from gpt2_coarse_finetune import gpt2_tokenize, test_generate, create_data_loaders, format_time
-from torch.utils.data import DataLoader, SequentialSampler
+from gpt2_coarse_finetune import gpt2_tokenize, test_generate, create_data_loaders, format_time, basic_gpt2_tokenize
+from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
 from torch.utils.data import TensorDataset
+from torch.nn import CrossEntropyLoss
 import numpy as np
 import random
 import time
@@ -61,10 +62,10 @@ def gpt2_fine_tokenize(tokenizer, df, index_to_label, pad_token_dict, max_length
 
 
 def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_dataloader, validation_dataloader,
-          doc_start_ind, index_to_label, device):
-    def calculate_loss(batch_fine_probs, batch_coarse_probs, batch_fine_input_masks, batch_coarse_input_masks,
-                       batch_fine_input_ids, batch_coarse_input_ids, coarse_tokenizer, fine_tokenizer,
-                       doc_start_ind, loss_fct):
+          label_to_exclusive_dataloader, doc_start_ind, index_to_label, device):
+    def calculate_kl_div_loss(batch_fine_probs, batch_coarse_probs, batch_fine_input_masks, batch_coarse_input_masks,
+                              batch_fine_input_ids, batch_coarse_input_ids, coarse_tokenizer, fine_tokenizer,
+                              doc_start_ind, loss_fct):
         # Remove pad tokens
         # consider from doc_start_ind - 1
         batch_size = batch_fine_probs.shape[0]
@@ -96,6 +97,70 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         # Return mean of losses here
         losses = torch.cat(losses, dim=0)
         return losses.mean()
+
+    def calculate_cross_entropy_loss(fine_model, label_to_exclusive_dataloader, doc_start_ind):
+        loss_function = CrossEntropyLoss()
+        fine_model.eval()
+        b_labels_list = []
+        b_input_ids_list = []
+        b_input_mask_list = []
+        scores_list = []
+
+        for l in label_to_exclusive_dataloader:
+            dataloader = label_to_exclusive_dataloader[l]
+            for step, batch in enumerate(dataloader):
+                b_input_ids = batch[0].to(device)
+                b_labels = batch[0].to(device)
+                b_input_mask = batch[1].to(device)
+
+                outputs = fine_model(b_input_ids,
+                                     token_type_ids=None,
+                                     attention_mask=b_input_mask,
+                                     labels=b_labels)
+                b_labels_list.append(b_labels)
+                b_input_ids_list.append(b_input_ids)
+                b_input_mask_list.append(b_input_mask)
+                scores_list.append(outputs[1])
+
+        b_labels_tensor = torch.cat(b_labels_list, dim=0)
+        b_input_ids_tensor = torch.cat(b_input_ids_list, dim=0)
+        b_input_mask_tensor = torch.cat(b_input_mask_list, dim=0)
+        scores_tensor = torch.cat(scores_list, dim=0)
+
+        assert b_labels_tensor.shape[0] == b_input_ids_tensor.shape[0] == b_input_mask_tensor.shape[0] == \
+               scores_tensor.shape[0]
+        batch_size = scores_tensor.shape[0]
+        logits_collected = []
+        labels_collected = []
+        for b in range(batch_size):
+            logits_ind = scores_tensor[b, :, :]  # seq_len x |V|
+            labels_ind = b_labels_tensor[b, :]  # seq_len
+            mask = b_input_mask_tensor[b, :] > 0
+            maski = mask.unsqueeze(-1).expand_as(logits_ind)
+            # unpad_seq_len x |V|
+            logits_pad_removed = torch.masked_select(logits_ind, maski).view(-1, logits_ind.size(-1))
+            labels_pad_removed = torch.masked_select(labels_ind, mask)  # unpad_seq_len
+
+            shift_logits = logits_pad_removed[doc_start_ind - 1:-1, :].contiguous()
+            shift_labels = labels_pad_removed[doc_start_ind:].contiguous()
+            # Flatten the tokens
+            logits_collected.append(shift_logits.view(-1, shift_logits.size(-1)))
+            labels_collected.append(shift_labels.view(-1))
+
+        logits_collected = torch.cat(logits_collected, dim=0)
+        labels_collected = torch.cat(labels_collected, dim=0)
+        loss = loss_function(logits_collected, labels_collected)
+        fine_model.train()
+        return loss
+
+    def calculate_loss(batch_fine_probs, batch_coarse_probs, batch_fine_input_masks, batch_coarse_input_masks,
+                       batch_fine_input_ids, batch_coarse_input_ids, coarse_tokenizer, fine_tokenizer,
+                       fine_model, label_to_exclusive_dataloader, doc_start_ind, loss_fct, lambda_1=0.7):
+        kl_div_loss = calculate_kl_div_loss(batch_fine_probs, batch_coarse_probs, batch_fine_input_masks,
+                                            batch_coarse_input_masks, batch_fine_input_ids, batch_coarse_input_ids,
+                                            coarse_tokenizer, fine_tokenizer, doc_start_ind, loss_fct)
+        cross_ent_loss = calculate_cross_entropy_loss(fine_model, label_to_exclusive_dataloader, doc_start_ind)
+        return kl_div_loss + lambda_1 * cross_ent_loss
 
     # epsilon = 1e-20  # Defined to avoid log probability getting undefined.
     fine_posterior = torch.nn.Parameter(torch.ones(len(index_to_label)).to(device))
@@ -207,7 +272,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
 
             loss = calculate_loss(batch_fine_log_probs, batch_coarse_probs, batch_fine_input_masks, b_coarse_input_mask,
                                   batch_fine_input_ids, b_coarse_input_ids, coarse_tokenizer, fine_tokenizer,
-                                  doc_start_ind, loss_fct)
+                                  fine_model, label_to_exclusive_dataloader, doc_start_ind, loss_fct)
             # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
             print("Loss:", loss.item(), flush=True)
@@ -294,7 +359,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
             # Accumulate the validation loss.
             loss = calculate_loss(batch_fine_log_probs, batch_coarse_probs, batch_fine_input_masks, b_coarse_input_mask,
                                   batch_fine_input_ids, b_coarse_input_ids, coarse_tokenizer, fine_tokenizer,
-                                  doc_start_ind, loss_fct)
+                                  fine_model, label_to_exclusive_dataloader, doc_start_ind, loss_fct)
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
@@ -426,6 +491,7 @@ if __name__ == "__main__":
     basepath = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
+    exclusive_df_dir = pkl_dump_dir + "exclusive/"
 
     base_fine_path = pkl_dump_dir + "gpt2/fine/"
 
@@ -491,12 +557,29 @@ if __name__ == "__main__":
         dataset = TensorDataset(coarse_input_ids, coarse_attention_masks, fine_input_ids, fine_attention_masks)
 
         train_dataloader, validation_dataloader = create_data_loaders(dataset, batch_size=1)
+
+        label_to_exclusive_dataloader = {}
+        for ch in children:
+            ch_str = " ".join(ch.strip().split("_"))
+            child_df = pickle.load(open(exclusive_df_dir + ch_str + ".pkl", "rb"))
+            temp_child_lbls = [ch] * len(child_df.text.values)
+            child_exc_input_ids, child_exc_attention_masks = basic_gpt2_tokenize(fine_tokenizer, child_df.text.values,
+                                                                                 temp_child_lbls, pad_token_dict)
+            child_exc_dataset = TensorDataset(child_exc_input_ids, child_exc_attention_masks)
+            dataloader = DataLoader(
+                child_exc_dataset,  # The training samples.
+                sampler=RandomSampler(child_exc_dataset),  # Select batches randomly
+                batch_size=1  # Trains with this batch size.
+            )
+            label_to_exclusive_dataloader[ch] = dataloader
+
         fine_posterior, fine_model = train(coarse_model,
                                            fine_model,
                                            coarse_tokenizer,
                                            fine_tokenizer,
                                            train_dataloader,
                                            validation_dataloader,
+                                           label_to_exclusive_dataloader,
                                            doc_start_ind,
                                            index_to_label,
                                            device)

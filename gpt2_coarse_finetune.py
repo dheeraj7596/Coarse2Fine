@@ -24,6 +24,44 @@ def format_time(elapsed):
     return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
+def basic_gpt2_tokenize(tokenizer, sentences, labels, pad_token_dict, max_length=768):
+    input_ids = []
+    attention_masks = []
+    # For every sentence...
+    for i, sent in enumerate(sentences):
+        label = labels[i]
+        temp_list = ["<|labelpad|>"] * pad_token_dict[label]
+        if len(temp_list) > 0:
+            label_str = " ".join(label.split("_")) + " " + " ".join(temp_list)
+        else:
+            label_str = " ".join(label.split("_"))
+        encoded_dict = tokenizer.encode_plus(
+            label_str + " <|labelsep|> " + sent,  # Sentence to encode.
+            truncation=True,
+            max_length=max_length - 1,  # Pad & truncate all sentences.
+            pad_to_max_length=True,
+            return_attention_mask=True,  # Construct attn. masks.
+            return_tensors='pt',  # Return pytorch tensors.
+        )
+
+        encoded_dict['input_ids'] = torch.tensor(
+            [[tokenizer.bos_token_id] + encoded_dict['input_ids'].data.tolist()[0]]
+        )
+        encoded_dict['attention_mask'] = torch.tensor(
+            [[1] + encoded_dict['attention_mask'].data.tolist()[0]]
+        )
+        # Add the encoded sentence to the list.
+        input_ids.append(encoded_dict['input_ids'])
+
+        # And its attention mask (simply differentiates padding from non-padding).
+        attention_masks.append(encoded_dict['attention_mask'])
+    # Convert the lists into tensors.
+    input_ids = torch.cat(input_ids, dim=0)
+    attention_masks = torch.cat(attention_masks, dim=0)
+
+    return input_ids, attention_masks
+
+
 def gpt2_tokenize(tokenizer, sentences, label_strs, pad_token_dict, label_to_index, max_length=768):
     input_ids = []
     attention_masks = []
