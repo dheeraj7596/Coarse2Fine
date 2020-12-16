@@ -12,6 +12,7 @@ import random
 import time
 import os
 import copy
+from pytorch_memlab import MemReporter
 
 
 def gpt2_fine_tokenize(tokenizer, df, index_to_label, pad_token_dict, max_length=768):
@@ -62,12 +63,13 @@ def gpt2_fine_tokenize(tokenizer, df, index_to_label, pad_token_dict, max_length
 
 
 def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_dataloader, validation_dataloader,
-          exc_dataloader, doc_start_ind, index_to_label, device):
+          label_to_exclusive_dataloader, doc_start_ind, index_to_label, device, secondary_device):
     def calculate_kl_div_loss(batch_fine_probs, batch_coarse_probs, batch_fine_input_masks, batch_coarse_input_masks,
                               batch_fine_input_ids, batch_coarse_input_ids, coarse_tokenizer, fine_tokenizer,
-                              doc_start_ind, loss_fct):
+                              doc_start_ind):
         # Remove pad tokens
         # consider from doc_start_ind - 1
+        loss_fct = torch.nn.KLDivLoss(reduction="batchmean")
         batch_size = batch_fine_probs.shape[0]
         losses = []
         for b in range(batch_size):
@@ -98,56 +100,97 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         losses = torch.cat(losses, dim=0)
         return losses.mean()
 
-    def calculate_cross_entropy_loss(fine_model, exc_dataloader, doc_start_ind):
-        device = torch.device('cuda:7')
+    def calculate_cross_entropy_loss(fine_model, label_to_exclusive_dataloader, doc_start_ind, device,
+                                     secondary_device):
         loss_function = CrossEntropyLoss()
+        fine_model.to(secondary_device)
+
+        b_labels_list = []
+        b_input_ids_list = []
+        b_input_mask_list = []
+        scores_list = []
+
+        for l in label_to_exclusive_dataloader:
+            print("Label", l)
+            dataloader = label_to_exclusive_dataloader[l]
+            it = 0
+            for step, batch in dataloader:
+                print("Step for exc", step, it)
+                b_input_ids = batch[0].to(secondary_device)
+                b_labels = batch[0].to(secondary_device)
+                b_input_mask = batch[1].to(secondary_device)
+
+                outputs = fine_model(b_input_ids,
+                                     token_type_ids=None,
+                                     attention_mask=b_input_mask,
+                                     labels=b_labels)
+                b_labels_list.append(b_labels)
+                b_input_ids_list.append(b_input_ids)
+                b_input_mask_list.append(b_input_mask)
+                scores_list.append(outputs[1])
+                # reporter = MemReporter()
+                # reporter.report()
+                it += 1
+                if it == 5:
+                    break
+
+        b_labels_tensor = torch.cat(b_labels_list, dim=0)
+        b_input_ids_tensor = torch.cat(b_input_ids_list, dim=0)
+        b_input_mask_tensor = torch.cat(b_input_mask_list, dim=0)
+        scores_tensor = torch.cat(scores_list, dim=0)
+
+        assert b_labels_tensor.shape[0] == b_input_ids_tensor.shape[0] == b_input_mask_tensor.shape[0] == \
+               scores_tensor.shape[0]
+        batch_size = scores_tensor.shape[0]
+        logits_collected = []
+        labels_collected = []
+        for b in range(batch_size):
+            logits_ind = scores_tensor[b, :, :]  # seq_len x |V|
+            labels_ind = b_labels_tensor[b, :]  # seq_len
+            mask = b_input_mask_tensor[b, :] > 0
+            maski = mask.unsqueeze(-1).expand_as(logits_ind)
+            # unpad_seq_len x |V|
+            logits_pad_removed = torch.masked_select(logits_ind, maski).view(-1, logits_ind.size(-1))
+            labels_pad_removed = torch.masked_select(labels_ind, mask)  # unpad_seq_len
+
+            shift_logits = logits_pad_removed[doc_start_ind - 1:-1, :].contiguous()
+            shift_labels = labels_pad_removed[doc_start_ind:].contiguous()
+            # Flatten the tokens
+            logits_collected.append(shift_logits.view(-1, shift_logits.size(-1)))
+            labels_collected.append(shift_labels.view(-1))
+
+        logits_collected = torch.cat(logits_collected, dim=0)
+        labels_collected = torch.cat(labels_collected, dim=0)
+        loss = loss_function(logits_collected, labels_collected).to(device)
         fine_model.to(device)
+        return loss
 
-        losses = []
-        for step, batch in enumerate(exc_dataloader):
-            b_input_ids = batch[0].to(device)
-            b_labels = batch[0].to(device)
-            b_input_mask = batch[1].to(device)
-
-            outputs = fine_model(b_input_ids,
-                                 token_type_ids=None,
-                                 attention_mask=b_input_mask,
-                                 labels=b_labels)
-
-            batch_size = b_input_ids.shape[0]
-            for b in range(batch_size):
-                logits_ind = outputs[1][b, :, :]  # seq_len x |V|
-                labels_ind = b_labels[b, :]  # seq_len
-                mask = b_input_mask[b, :] > 0
-                maski = mask.unsqueeze(-1).expand_as(logits_ind)
-                # unpad_seq_len x |V|
-                logits_pad_removed = torch.masked_select(logits_ind, maski).view(-1, logits_ind.size(-1))
-                labels_pad_removed = torch.masked_select(labels_ind, mask)  # unpad_seq_len
-
-                shift_logits = logits_pad_removed[doc_start_ind - 1:-1, :].contiguous()
-                shift_labels = labels_pad_removed[doc_start_ind:].contiguous()
-                # Flatten the tokens
-                loss = loss_function(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)).unsqueeze(
-                    0)
-                losses.append(loss)
-        losses = torch.cat(losses, dim=0)
-        fine_model.to(torch.device('cuda:1'))
-        return losses.mean()
-
-    def calculate_loss(batch_fine_probs, batch_coarse_probs, batch_fine_input_masks, batch_coarse_input_masks,
-                       batch_fine_input_ids, batch_coarse_input_ids, coarse_tokenizer, fine_tokenizer,
-                       fine_model, exc_dataloader, doc_start_ind, loss_fct, lambda_1=0.7):
+    def calculate_loss(batch_fine_probs,
+                       batch_coarse_probs,
+                       batch_fine_input_masks,
+                       batch_coarse_input_masks,
+                       batch_fine_input_ids,
+                       batch_coarse_input_ids,
+                       coarse_tokenizer,
+                       fine_tokenizer,
+                       fine_model,
+                       label_to_exclusive_dataloader,
+                       doc_start_ind,
+                       device,
+                       secondary_device,
+                       lambda_1=0.7):
         kl_div_loss = calculate_kl_div_loss(batch_fine_probs, batch_coarse_probs, batch_fine_input_masks,
                                             batch_coarse_input_masks, batch_fine_input_ids, batch_coarse_input_ids,
-                                            coarse_tokenizer, fine_tokenizer, doc_start_ind, loss_fct)
-        del batch_fine_probs
-        del batch_coarse_probs
-        del batch_fine_input_masks
-        del batch_coarse_input_masks
-        del batch_fine_input_ids
-        del batch_coarse_input_ids
-        torch.cuda.empty_cache()
-        cross_ent_loss = calculate_cross_entropy_loss(fine_model, exc_dataloader, doc_start_ind)
+                                            coarse_tokenizer, fine_tokenizer, doc_start_ind)
+        # del batch_fine_probs
+        # del batch_coarse_probs
+        # del batch_fine_input_masks
+        # del batch_coarse_input_masks
+        # del batch_fine_input_ids
+        # del batch_coarse_input_ids
+        # torch.cuda.empty_cache()
+        cross_ent_loss = calculate_cross_entropy_loss(fine_model, label_to_exclusive_dataloader, doc_start_ind, device,
+                                                      secondary_device)
         return kl_div_loss + lambda_1 * cross_ent_loss
 
     # epsilon = 1e-20  # Defined to avoid log probability getting undefined.
@@ -156,7 +199,6 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                       lr=5e-4,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8.
                       )
-    loss_fct = torch.nn.KLDivLoss(reduction="batchmean")
     sample_every = 100
     warmup_steps = 1e2
     epochs = 5
@@ -222,7 +264,8 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
             b_fine_input_mask_minibatch = batch[3].to(device)
 
             coarse_model.zero_grad()
-            fine_model.zero_grad()
+            # fine_model.zero_grad()
+            optimizer.zero_grad()
 
             outputs = coarse_model(b_coarse_input_ids,
                                    token_type_ids=None,
@@ -258,9 +301,19 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
             batch_fine_input_ids = torch.cat(batch_fine_input_ids, dim=0)  # (b_size, seq_len)
             batch_fine_log_probs = torch.logsumexp(batch_fine_probs, dim=1)  # This computes logsum_i P(f_i|c) P(D|f_i)
 
-            loss = calculate_loss(batch_fine_log_probs, batch_coarse_probs, batch_fine_input_masks, b_coarse_input_mask,
-                                  batch_fine_input_ids, b_coarse_input_ids, coarse_tokenizer, fine_tokenizer,
-                                  fine_model, exc_dataloader, doc_start_ind, loss_fct)
+            loss = calculate_loss(batch_fine_log_probs,
+                                  batch_coarse_probs,
+                                  batch_fine_input_masks,
+                                  b_coarse_input_mask,
+                                  batch_fine_input_ids,
+                                  b_coarse_input_ids,
+                                  coarse_tokenizer,
+                                  fine_tokenizer,
+                                  fine_model,
+                                  label_to_exclusive_dataloader,
+                                  doc_start_ind,
+                                  device,
+                                  secondary_device)
             # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
             print("Loss:", loss.item(), flush=True)
@@ -345,9 +398,19 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                                        dim=1)  # This computes logsum_i P(f_i|c) P(D|f_i)
 
             # Accumulate the validation loss.
-            loss = calculate_loss(batch_fine_log_probs, batch_coarse_probs, batch_fine_input_masks, b_coarse_input_mask,
-                                  batch_fine_input_ids, b_coarse_input_ids, coarse_tokenizer, fine_tokenizer,
-                                  fine_model, exc_dataloader, doc_start_ind, loss_fct)
+            loss = calculate_loss(batch_fine_log_probs,
+                                  batch_coarse_probs,
+                                  batch_fine_input_masks,
+                                  b_coarse_input_mask,
+                                  batch_fine_input_ids,
+                                  b_coarse_input_ids,
+                                  coarse_tokenizer,
+                                  fine_tokenizer,
+                                  fine_model,
+                                  label_to_exclusive_dataloader,
+                                  doc_start_ind,
+                                  device,
+                                  secondary_device)
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
@@ -474,6 +537,12 @@ def test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_s
     return true, preds, logits
 
 
+def func(dataloader):
+    while True:
+        for step, batch in enumerate(dataloader):
+            yield step, batch
+
+
 if __name__ == "__main__":
     # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     basepath = "/data4/dheeraj/coarse2fine/"
@@ -490,12 +559,15 @@ if __name__ == "__main__":
     use_gpu = int(sys.argv[1])
     # use_gpu = False
     gpu_id = int(sys.argv[2])
+    secondary_gpu_id = int(sys.argv[3])
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
         device = torch.device('cuda:' + str(gpu_id))
+        secondary_device = torch.device('cuda:' + str(secondary_gpu_id))
     else:
         device = torch.device("cpu")
+        secondary_device = torch.device("cpu")
 
     df = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
@@ -547,22 +619,19 @@ if __name__ == "__main__":
 
         train_dataloader, validation_dataloader = create_data_loaders(dataset, batch_size=1)
 
-        child_lbls = []
-        child_sents = []
+        label_to_exclusive_dataloader = {}
         for ch in children:
             child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
-            child_lbls += [ch] * len(child_df.text.values)
-            child_sents += list(child_df.text.values)
-
-        child_exc_input_ids, child_exc_attention_masks = basic_gpt2_tokenize(fine_tokenizer, child_sents,
-                                                                             child_lbls, pad_token_dict,
-                                                                             max_length=300)
-        child_exc_dataset = TensorDataset(child_exc_input_ids, child_exc_attention_masks)
-        exc_dataloader = DataLoader(
-            child_exc_dataset,  # The training samples.
-            sampler=RandomSampler(child_exc_dataset),  # Select batches randomly
-            batch_size=1  # Trains with this batch size.
-        )
+            temp_child_lbls = [ch] * len(child_df.text.values)
+            child_exc_input_ids, child_exc_attention_masks = basic_gpt2_tokenize(fine_tokenizer, child_df.text.values,
+                                                                                 temp_child_lbls, pad_token_dict)
+            child_exc_dataset = TensorDataset(child_exc_input_ids, child_exc_attention_masks)
+            dataloader = DataLoader(
+                child_exc_dataset,  # The training samples.
+                sampler=SequentialSampler(child_exc_dataset),  # Select batches randomly
+                batch_size=1  # Trains with this batch size.
+            )
+            label_to_exclusive_dataloader[ch] = func(dataloader)
 
         fine_posterior, fine_model = train(coarse_model,
                                            fine_model,
@@ -570,10 +639,11 @@ if __name__ == "__main__":
                                            fine_tokenizer,
                                            train_dataloader,
                                            validation_dataloader,
-                                           exc_dataloader,
+                                           label_to_exclusive_dataloader,
                                            doc_start_ind,
                                            index_to_label,
-                                           device)
+                                           device,
+                                           secondary_device)
         test_generate(fine_model, fine_tokenizer, children, pad_token_dict, device)
         true, preds, _ = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
                               index_to_label, label_to_index, list(temp_df.label.values), device)
