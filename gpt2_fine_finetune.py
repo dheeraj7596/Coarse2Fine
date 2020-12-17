@@ -131,7 +131,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                 # reporter = MemReporter()
                 # reporter.report()
                 it += 1
-                if it == 5:
+                if it == 1:
                     break
 
         b_labels_tensor = torch.cat(b_labels_list, dim=0)
@@ -178,7 +178,8 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                        doc_start_ind,
                        device,
                        secondary_device,
-                       lambda_1=0.7):
+                       lambda_1=1,
+                       is_val=False):
         kl_div_loss = calculate_kl_div_loss(batch_fine_probs, batch_coarse_probs, batch_fine_input_masks,
                                             batch_coarse_input_masks, batch_fine_input_ids, batch_coarse_input_ids,
                                             coarse_tokenizer, fine_tokenizer, doc_start_ind)
@@ -189,8 +190,12 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         # del batch_fine_input_ids
         # del batch_coarse_input_ids
         # torch.cuda.empty_cache()
-        cross_ent_loss = calculate_cross_entropy_loss(fine_model, label_to_exclusive_dataloader, doc_start_ind, device,
-                                                      secondary_device)
+        if not is_val:
+            cross_ent_loss = calculate_cross_entropy_loss(fine_model, label_to_exclusive_dataloader, doc_start_ind,
+                                                          device, secondary_device)
+        else:
+            cross_ent_loss = 0
+
         return kl_div_loss + lambda_1 * cross_ent_loss
 
     # epsilon = 1e-20  # Defined to avoid log probability getting undefined.
@@ -410,7 +415,8 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   label_to_exclusive_dataloader,
                                   doc_start_ind,
                                   device,
-                                  secondary_device)
+                                  secondary_device,
+                                  is_val=True)
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
