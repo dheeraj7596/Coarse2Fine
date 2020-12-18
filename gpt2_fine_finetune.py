@@ -439,6 +439,10 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
             }
         )
 
+    #todo make temp_df, fine_input_ids, fine_attention_masks class variables.
+    true, preds, _ = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
+                          index_to_label, label_to_index, list(temp_df.label.values), device)
+
     print("", flush=True)
     print("Training complete!", flush=True)
 
@@ -554,7 +558,7 @@ if __name__ == "__main__":
     basepath = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
-    exclusive_df_dir = pkl_dump_dir + "exclusive/"
+    exclusive_df_dir = pkl_dump_dir + "exclusive_gold/"
 
     base_fine_path = pkl_dump_dir + "gpt2/fine/"
 
