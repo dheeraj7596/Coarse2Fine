@@ -634,9 +634,9 @@ if __name__ == "__main__":
 
         coarse_input_ids, coarse_attention_masks, _ = gpt2_tokenize(coarse_tokenizer, temp_df.text.values,
                                                                     temp_coarse_lbls, pad_token_dict,
-                                                                    temp_coarse_label_to_index, max_length=300)
+                                                                    temp_coarse_label_to_index)
         fine_input_ids, fine_attention_masks = gpt2_fine_tokenize(fine_tokenizer, temp_df, index_to_label,
-                                                                  pad_token_dict, max_length=300)
+                                                                  pad_token_dict)
         dataset = TensorDataset(coarse_input_ids, coarse_attention_masks, fine_input_ids, fine_attention_masks)
 
         train_dataloader, validation_dataloader = create_data_loaders(dataset, batch_size=1)
