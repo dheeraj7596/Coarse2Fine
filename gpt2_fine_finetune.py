@@ -111,11 +111,11 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         scores_list = []
 
         for l in label_to_exclusive_dataloader:
-            print("Label", l)
+            # print("Label", l)
             dataloader = label_to_exclusive_dataloader[l]
             it = 0
             for step, batch in dataloader:
-                print("Step for exc", step, it)
+                # print("Step for exc", step, it)
                 b_input_ids = batch[0].to(secondary_device)
                 b_labels = batch[0].to(secondary_device)
                 b_input_mask = batch[1].to(secondary_device)
