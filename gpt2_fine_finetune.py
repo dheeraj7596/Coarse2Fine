@@ -193,10 +193,10 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         if not is_val:
             cross_ent_loss = calculate_cross_entropy_loss(fine_model, label_to_exclusive_dataloader, doc_start_ind,
                                                           device, secondary_device)
+            print("KL-loss", kl_div_loss.item(), "CE-loss", cross_ent_loss.item())
         else:
             cross_ent_loss = 0
-
-        print("KL-loss", kl_div_loss.item(), "CE-loss", cross_ent_loss.item())
+            print("KL-loss", kl_div_loss.item(), "CE-loss", cross_ent_loss)
         return (1 - lambda_1) * kl_div_loss + lambda_1 * cross_ent_loss
 
     def compute_lambda(step, max_steps):
