@@ -178,7 +178,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                        doc_start_ind,
                        device,
                        secondary_device,
-                       lambda_1=1,
+                       lambda_1=5,
                        is_val=False):
         kl_div_loss = calculate_kl_div_loss(batch_fine_probs, batch_coarse_probs, batch_fine_input_masks,
                                             batch_coarse_input_masks, batch_fine_input_ids, batch_coarse_input_ids,
