@@ -439,9 +439,9 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
             }
         )
 
-    #todo make temp_df, fine_input_ids, fine_attention_masks class variables.
-    true, preds, _ = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
-                          index_to_label, label_to_index, list(temp_df.label.values), device)
+        # todo make temp_df, fine_input_ids, fine_attention_masks class variables.
+        true, preds, _ = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
+                              index_to_label, label_to_index, list(temp_df.label.values), device)
 
     print("", flush=True)
     print("Training complete!", flush=True)
