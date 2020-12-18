@@ -196,7 +196,15 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         else:
             cross_ent_loss = 0
 
-        return kl_div_loss + lambda_1 * cross_ent_loss
+        print("KL-loss", kl_div_loss.item(), "CE-loss", cross_ent_loss.item())
+        return (1 - lambda_1) * kl_div_loss + lambda_1 * cross_ent_loss
+
+    def compute_lambda(step, max_steps):
+        temp = 1 - step / max_steps
+        if temp < 0:
+            return 0
+        else:
+            return temp
 
     # epsilon = 1e-20  # Defined to avoid log probability getting undefined.
     fine_posterior = torch.nn.Parameter(torch.ones(len(index_to_label)).to(device))
@@ -221,6 +229,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
     total_t0 = time.time()
 
     coarse_model.eval()
+    global_step = 0
 
     for epoch_i in range(0, epochs):
         print("", flush=True)
@@ -318,7 +327,8 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   label_to_exclusive_dataloader,
                                   doc_start_ind,
                                   device,
-                                  secondary_device)
+                                  secondary_device,
+                                  lambda_1=compute_lambda(global_step, max_steps=epochs * 1000))
             # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
             print("Loss:", loss.item(), flush=True)
@@ -326,6 +336,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
             loss.backward()
             optimizer.step()
             scheduler.step()
+            global_step += 1
 
         # Calculate the average loss over all of the batches.
         avg_train_loss = total_train_loss / len(train_dataloader)
@@ -416,7 +427,8 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   doc_start_ind,
                                   device,
                                   secondary_device,
-                                  is_val=True)
+                                  is_val=True,
+                                  lambda_1=compute_lambda(global_step, max_steps=epochs * 1000))
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
