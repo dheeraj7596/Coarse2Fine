@@ -422,7 +422,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   device,
                                   secondary_device,
                                   is_val=True,
-                                  lambda_1=compute_lambda(global_step, max_steps=epochs * 1000))
+                                  lambda_1=compute_lambda(global_step, max_steps=500))
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
