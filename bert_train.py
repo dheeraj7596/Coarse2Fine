@@ -420,8 +420,9 @@ if __name__ == "__main__":
     gpu_id = int(sys.argv[2])
     # use_gpu = False
 
-    df = pickle.load(open(pkl_dump_dir + "df_coarse.pkl", "rb"))
-    df_train, df_test = train_test_split(df, test_size=0.1, stratify=df["label"], random_state=42)
+    df_train = pickle.load(open(pkl_dump_dir + "df_gen_arts.pkl", "rb"))
+    df_fine = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
+    df_test = df_fine[df_fine["label"].isin(list(set(df_train.label.values())))].reset_index(drop=True)
     # df_train = preprocess_df(df_train)
 
     # Tokenize all of the sentences and map the tokens to their word IDs.
