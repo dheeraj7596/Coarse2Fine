@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
         children = parent_to_child[p]
         for ch in children:
-            num = 3
+            num = 500
             sentences = generate(ch, fine_tokenizer, fine_model, pad_token_dict, num_samples=num)
             sentences = post_process(sentences)
             labels = [ch] * num
