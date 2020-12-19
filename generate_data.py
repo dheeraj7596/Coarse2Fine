@@ -47,16 +47,16 @@ def post_process(sentences):
 
 
 if __name__ == "__main__":
-    basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
-    # basepath = "/data4/dheeraj/coarse2fine/"
+    # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
+    basepath = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
 
     base_fine_path = pkl_dump_dir + "gpt2/fine/"
 
-    # use_gpu = int(sys.argv[1])
-    use_gpu = False
-    # gpu_id = int(sys.argv[2])
+    use_gpu = int(sys.argv[1])
+    # use_gpu = False
+    gpu_id = int(sys.argv[2])
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     all_sents = []
     all_labels = []
-    for p in parent_to_child:
+    for p in ["arts"]:
         fine_label_path = base_fine_path + p
         fine_tok_path = fine_label_path + "/tokenizer"
         fine_model_path = fine_label_path + "/model/"
