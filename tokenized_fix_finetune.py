@@ -566,10 +566,10 @@ if __name__ == "__main__":
     pkl_dump_dir = basepath + dataset
     exclusive_df_dir = pkl_dump_dir + "exclusive_gold/"
 
-    base_fine_path = pkl_dump_dir + "gpt2/fine/"
+    base_fine_path = pkl_dump_dir + "gpt2/fine_tok_fixed/"
 
-    coarse_tok_path = pkl_dump_dir + "gpt2/tokenizer_coarse"
-    model_path = pkl_dump_dir + "gpt2/model/"
+    coarse_tok_path = pkl_dump_dir + "gpt2/tok_fixed/tokenizer_coarse"
+    model_path = pkl_dump_dir + "gpt2/tok_fixed/model/"
     model_name = "coarse.pt"
 
     use_gpu = int(sys.argv[1])
