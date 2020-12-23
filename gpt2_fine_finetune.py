@@ -34,12 +34,18 @@ def gpt2_fine_tokenize(tokenizer, df, index_to_label, pad_token_dict, max_length
             else:
                 label_str = processed_label_str
             encoded_dict = tokenizer.encode_plus(
-                tokenizer.bos_token + " " + label_str + " <|labelsep|> " + sent,  # Sentence to encode.
+                label_str + " <|labelsep|> " + sent,  # Sentence to encode.
                 truncation=True,
-                max_length=max_length,  # Pad & truncate all sentences.
+                max_length=max_length - 1,  # Pad & truncate all sentences.
                 pad_to_max_length=True,
                 return_attention_mask=True,  # Construct attn. masks.
                 return_tensors='pt',  # Return pytorch tensors.
+            )
+            encoded_dict['input_ids'] = torch.tensor(
+                [[tokenizer.bos_token_id] + encoded_dict['input_ids'].data.tolist()[0]]
+            )
+            encoded_dict['attention_mask'] = torch.tensor(
+                [[1] + encoded_dict['attention_mask'].data.tolist()[0]]
             )
             sibling_input_ids.append(encoded_dict['input_ids'])
             sibling_attn_masks.append(encoded_dict['attention_mask'])
@@ -459,15 +465,15 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
 def create_pad_token_dict(p, parent_to_child, coarse_tokenizer, fine_tokenizer):
     pad_token_dict = {}
     children = parent_to_child[p]
-    parent_tokens = coarse_tokenizer.tokenize(" " + p)
+    parent_tokens = coarse_tokenizer.tokenize(p)
     max_num = len(parent_tokens)
     for ch in children:
-        max_num = max(len(fine_tokenizer.tokenize(" " + " ".join(ch.split("_")))), max_num)
+        max_num = max(len(fine_tokenizer.tokenize(" ".join(ch.split("_")))), max_num)
     pad_token_dict[p] = max_num - len(parent_tokens)
     for ch in children:
-        ch_tokens = len(fine_tokenizer.tokenize(" " + " ".join(ch.split("_"))))
+        ch_tokens = len(fine_tokenizer.tokenize(" ".join(ch.split("_"))))
         pad_token_dict[ch] = max_num - ch_tokens
-    doc_start_ind = 1 + max_num + 1  # this gives the token from which the document starts in the inputids, 1 for the starttoken, max_num for label infor, 1 for label_sep
+    doc_start_ind = 1 + max_num + 1  # this gives the token from which the document starts in the inputids, 1 for the starttoken, max_num for label infor, 1 for label_sup
     return doc_start_ind, pad_token_dict
 
 
@@ -604,7 +610,7 @@ if __name__ == "__main__":
 
     all_true = []
     all_preds = []
-    for p in parent_to_child:
+    for p in ["arts"]:
         print("Training coarse label:", p)
         fine_tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token='<|startoftext|>', pad_token='<|pad|>',
                                                        additional_special_tokens=['<|labelsep|>', '<|labelpad|>'])

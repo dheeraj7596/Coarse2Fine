@@ -36,12 +36,19 @@ def basic_gpt2_tokenize(tokenizer, sentences, labels, pad_token_dict, max_length
         else:
             label_str = " ".join(label.split("_"))
         encoded_dict = tokenizer.encode_plus(
-            tokenizer.bos_token + " " + label_str + " <|labelsep|> " + sent,  # Sentence to encode.
+            label_str + " <|labelsep|> " + sent,  # Sentence to encode.
             truncation=True,
-            max_length=max_length,  # Pad & truncate all sentences.
+            max_length=max_length - 1,  # Pad & truncate all sentences.
             pad_to_max_length=True,
             return_attention_mask=True,  # Construct attn. masks.
             return_tensors='pt',  # Return pytorch tensors.
+        )
+
+        encoded_dict['input_ids'] = torch.tensor(
+            [[tokenizer.bos_token_id] + encoded_dict['input_ids'].data.tolist()[0]]
+        )
+        encoded_dict['attention_mask'] = torch.tensor(
+            [[1] + encoded_dict['attention_mask'].data.tolist()[0]]
         )
         # Add the encoded sentence to the list.
         input_ids.append(encoded_dict['input_ids'])
@@ -68,16 +75,23 @@ def gpt2_tokenize(tokenizer, sentences, label_strs, pad_token_dict, label_to_ind
         label = label_strs[i]
         temp_list = ["<|labelpad|>"] * pad_token_dict[label]
         if len(temp_list) > 0:
-            label_str = " ".join(label.split("_")) + " " + " ".join(temp_list)
+            label_str = label + " " + " ".join(temp_list)
         else:
-            label_str = " ".join(label.split("_"))
+            label_str = label
         encoded_dict = tokenizer.encode_plus(
-            tokenizer.bos_token + " " + label_str + " <|labelsep|> " + sent,  # Sentence to encode.
+            label_str + " <|labelsep|> " + sent,  # Sentence to encode.
             truncation=True,
-            max_length=max_length,  # Pad & truncate all sentences.
+            max_length=max_length - 1,  # Pad & truncate all sentences.
             pad_to_max_length=True,
             return_attention_mask=True,  # Construct attn. masks.
             return_tensors='pt',  # Return pytorch tensors.
+        )
+
+        encoded_dict['input_ids'] = torch.tensor(
+            [[tokenizer.bos_token_id] + encoded_dict['input_ids'].data.tolist()[0]]
+        )
+        encoded_dict['attention_mask'] = torch.tensor(
+            [[1] + encoded_dict['attention_mask'].data.tolist()[0]]
         )
         # Add the encoded sentence to the list.
         input_ids.append(encoded_dict['input_ids'])
@@ -347,10 +361,10 @@ if __name__ == "__main__":
     doc_start_ind_dict = {}
     for p in parent_to_child:
         children = parent_to_child[p]
-        parent_tokens = tokenizer.tokenize(" " + p)
+        parent_tokens = tokenizer.tokenize(p)
         max_num = len(parent_tokens)
         for ch in children:
-            max_num = max(len(tokenizer.tokenize(" " + " ".join(ch.split("_")))), max_num)
+            max_num = max(len(tokenizer.tokenize(" ".join(ch.split("_")))), max_num)
         pad_token_dict[p] = max_num - len(parent_tokens)
         doc_start_ind_dict[p] = 1 + max_num + 1
         # this gives the token from which the document starts in the inputids, 1 for the starttoken, max_num for label infor, 1 for label_sup
