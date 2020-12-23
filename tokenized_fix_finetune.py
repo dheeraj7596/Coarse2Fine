@@ -3,7 +3,7 @@ import torch
 import pickle
 from transformers import GPT2Tokenizer, GPT2LMHeadModel, get_linear_schedule_with_warmup, AdamW
 from sklearn.metrics import classification_report
-from gpt2_coarse_finetune import gpt2_tokenize, test_generate, create_data_loaders, format_time, basic_gpt2_tokenize
+from tokenized_fix_coarse import gpt2_tokenize, test_generate, create_data_loaders, format_time, basic_gpt2_tokenize
 from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
 from torch.utils.data import TensorDataset
 from torch.nn import CrossEntropyLoss
@@ -604,7 +604,7 @@ if __name__ == "__main__":
 
     all_true = []
     all_preds = []
-    for p in parent_to_child:
+    for p in ["arts"]:
         print("Training coarse label:", p)
         fine_tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token='<|startoftext|>', pad_token='<|pad|>',
                                                        additional_special_tokens=['<|labelsep|>', '<|labelpad|>'])
@@ -639,6 +639,7 @@ if __name__ == "__main__":
         label_to_exclusive_dataloader = {}
         for ch in children:
             child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
+            child_df = child_df.sample(n=30).reset_index(drop=True)
             temp_child_lbls = [ch] * len(child_df.text.values)
             child_exc_input_ids, child_exc_attention_masks = basic_gpt2_tokenize(fine_tokenizer, child_df.text.values,
                                                                                  temp_child_lbls, pad_token_dict)
