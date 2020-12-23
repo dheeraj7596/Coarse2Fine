@@ -570,7 +570,7 @@ if __name__ == "__main__":
     basepath = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
-    exclusive_df_dir = pkl_dump_dir + "exclusive_gold/"
+    exclusive_df_dir = pkl_dump_dir + "exclusive/"
 
     base_fine_path = pkl_dump_dir + "gpt2/fine/"
 
@@ -645,6 +645,7 @@ if __name__ == "__main__":
         label_to_exclusive_dataloader = {}
         for ch in children:
             child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
+            child_df = child_df.sample(n=30).reset_index(drop=True)
             temp_child_lbls = [ch] * len(child_df.text.values)
             child_exc_input_ids, child_exc_attention_masks = basic_gpt2_tokenize(fine_tokenizer, child_df.text.values,
                                                                                  temp_child_lbls, pad_token_dict)
