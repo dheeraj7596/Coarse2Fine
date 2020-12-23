@@ -320,8 +320,8 @@ if __name__ == "__main__":
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
 
-    tok_path = pkl_dump_dir + "gpt2/tokenizer_coarse"
-    model_path = pkl_dump_dir + "gpt2/model/"
+    tok_path = pkl_dump_dir + "gpt2/tok_fixed/tokenizer_coarse"
+    model_path = pkl_dump_dir + "gpt2/tok_fixed/model/"
     model_name = "coarse.pt"
 
     os.makedirs(tok_path, exist_ok=True)
