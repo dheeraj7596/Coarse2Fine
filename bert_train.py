@@ -422,7 +422,7 @@ if __name__ == "__main__":
 
     df_train = pickle.load(open(pkl_dump_dir + "df_gen_arts.pkl", "rb"))
     df_fine = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
-    df_test = df_fine[df_fine["label"].isin(list(set(df_train.label.values())))].reset_index(drop=True)
+    df_test = df_fine[df_fine["label"].isin(list(set(df_train.label.values)))].reset_index(drop=True)
     # df_train = preprocess_df(df_train)
 
     # Tokenize all of the sentences and map the tokens to their word IDs.
