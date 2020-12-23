@@ -356,7 +356,8 @@ if __name__ == "__main__":
         # this gives the token from which the document starts in the inputids, 1 for the starttoken, max_num for label infor, 1 for label_sup
 
     # tokenizer.convert_ids_to_tokens(tokenizer.convert_tokens_to_ids(tokenizer.tokenize("<|startoftext|> sports <|labelsep|> Hello, my dog is cute <|endoftext|>")))
-
+    print("Pad token dict", pad_token_dict)
+    print("Doc start ind dict", doc_start_ind_dict)
     model = GPT2LMHeadModel.from_pretrained('gpt2')
     model.resize_token_embeddings(len(tokenizer))
     model.to(device)
