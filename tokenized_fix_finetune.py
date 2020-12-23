@@ -606,6 +606,13 @@ if __name__ == "__main__":
     all_preds = []
     for p in ["arts"]:
         print("Training coarse label:", p)
+        fine_label_path = base_fine_path + p
+        os.makedirs(fine_label_path, exist_ok=True)
+        fine_tok_path = fine_label_path + "/tokenizer"
+        fine_model_path = fine_label_path + "/model/"
+        os.makedirs(fine_tok_path, exist_ok=True)
+        os.makedirs(fine_model_path, exist_ok=True)
+
         fine_tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token='<|startoftext|>', pad_token='<|pad|>',
                                                        additional_special_tokens=['<|labelsep|>', '<|labelpad|>'])
         fine_model = GPT2LMHeadModel.from_pretrained('gpt2')
@@ -622,6 +629,8 @@ if __name__ == "__main__":
 
         doc_start_ind, pad_token_dict = create_pad_token_dict(p, parent_to_child, coarse_tokenizer, fine_tokenizer)
         print(pad_token_dict, doc_start_ind)
+
+        pickle.dump(pad_token_dict, open(fine_label_path + "pad_token_dict.pkl", "wb"))
 
         temp_df = df[df.label.isin(children)].reset_index(drop=True)
         temp_coarse_lbls = [p] * len(temp_df.text.values)
@@ -667,13 +676,6 @@ if __name__ == "__main__":
                               index_to_label, label_to_index, list(temp_df.label.values), device)
         all_true += true
         all_preds += preds
-
-        fine_label_path = base_fine_path + p
-        os.makedirs(fine_label_path, exist_ok=True)
-        fine_tok_path = fine_label_path + "/tokenizer"
-        fine_model_path = fine_label_path + "/model/"
-        os.makedirs(fine_tok_path, exist_ok=True)
-        os.makedirs(fine_model_path, exist_ok=True)
 
         fine_tokenizer.save_pretrained(fine_tok_path)
         torch.save(fine_model, fine_model_path + p + ".pt")

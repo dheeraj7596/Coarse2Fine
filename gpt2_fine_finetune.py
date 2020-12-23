@@ -612,6 +612,13 @@ if __name__ == "__main__":
     all_preds = []
     for p in ["arts"]:
         print("Training coarse label:", p)
+        fine_label_path = base_fine_path + p
+        os.makedirs(fine_label_path, exist_ok=True)
+        fine_tok_path = fine_label_path + "/tokenizer"
+        fine_model_path = fine_label_path + "/model/"
+        os.makedirs(fine_tok_path, exist_ok=True)
+        os.makedirs(fine_model_path, exist_ok=True)
+
         fine_tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token='<|startoftext|>', pad_token='<|pad|>',
                                                        additional_special_tokens=['<|labelsep|>', '<|labelpad|>'])
         fine_model = GPT2LMHeadModel.from_pretrained('gpt2')
@@ -629,6 +636,8 @@ if __name__ == "__main__":
         doc_start_ind, pad_token_dict = create_pad_token_dict(p, parent_to_child, coarse_tokenizer, fine_tokenizer)
         print(pad_token_dict, doc_start_ind)
 
+        pickle.dump(pad_token_dict, open(fine_label_path + "pad_token_dict.pkl", "wb"))
+
         temp_df = df[df.label.isin(children)].reset_index(drop=True)
         temp_coarse_lbls = [p] * len(temp_df.text.values)
         temp_coarse_label_to_index = {p: 0}
@@ -645,7 +654,7 @@ if __name__ == "__main__":
         label_to_exclusive_dataloader = {}
         for ch in children:
             child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
-            child_df = child_df.sample(n=30).reset_index(drop=True)
+            child_df = child_df.sample(n=30, random_state=42).reset_index(drop=True)
             temp_child_lbls = [ch] * len(child_df.text.values)
             child_exc_input_ids, child_exc_attention_masks = basic_gpt2_tokenize(fine_tokenizer, child_df.text.values,
                                                                                  temp_child_lbls, pad_token_dict)
@@ -673,13 +682,6 @@ if __name__ == "__main__":
                               index_to_label, label_to_index, list(temp_df.label.values), device)
         all_true += true
         all_preds += preds
-
-        fine_label_path = base_fine_path + p
-        os.makedirs(fine_label_path, exist_ok=True)
-        fine_tok_path = fine_label_path + "/tokenizer"
-        fine_model_path = fine_label_path + "/model/"
-        os.makedirs(fine_tok_path, exist_ok=True)
-        os.makedirs(fine_model_path, exist_ok=True)
 
         fine_tokenizer.save_pretrained(fine_tok_path)
         torch.save(fine_model, fine_model_path + p + ".pt")

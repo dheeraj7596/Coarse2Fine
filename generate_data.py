@@ -52,7 +52,7 @@ if __name__ == "__main__":
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
 
-    base_fine_path = pkl_dump_dir + "gpt2/fine/"
+    base_fine_path = pkl_dump_dir + "gpt2/fine_tok_fixed/"
 
     use_gpu = int(sys.argv[1])
     # use_gpu = False
@@ -65,7 +65,6 @@ if __name__ == "__main__":
         device = torch.device("cpu")
 
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
-    pad_token_dict = pickle.load(open(pkl_dump_dir + "pad_token_dict.pkl", "rb"))
 
     all_sents = []
     all_labels = []
@@ -73,6 +72,8 @@ if __name__ == "__main__":
         fine_label_path = base_fine_path + p
         fine_tok_path = fine_label_path + "/tokenizer"
         fine_model_path = fine_label_path + "/model/"
+
+        pad_token_dict = pickle.load(open(fine_label_path + "pad_token_dict.pkl", "rb"))
 
         fine_tokenizer = GPT2Tokenizer.from_pretrained(fine_tok_path, do_lower_case=True)
         fine_model = torch.load(fine_model_path + p + ".pt", map_location=device)
