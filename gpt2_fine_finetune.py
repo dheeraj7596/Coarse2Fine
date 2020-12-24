@@ -637,6 +637,7 @@ if __name__ == "__main__":
         print(pad_token_dict, doc_start_ind)
 
         pickle.dump(pad_token_dict, open(fine_label_path + "/pad_token_dict.pkl", "wb"))
+        print("Pad token dict Dumped")
 
         temp_df = df[df.label.isin(children)].reset_index(drop=True)
         temp_coarse_lbls = [p] * len(temp_df.text.values)
