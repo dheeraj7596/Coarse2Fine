@@ -636,7 +636,7 @@ if __name__ == "__main__":
         doc_start_ind, pad_token_dict = create_pad_token_dict(p, parent_to_child, coarse_tokenizer, fine_tokenizer)
         print(pad_token_dict, doc_start_ind)
 
-        pickle.dump(pad_token_dict, open(fine_label_path + "pad_token_dict.pkl", "wb"))
+        pickle.dump(pad_token_dict, open(fine_label_path + "/pad_token_dict.pkl", "wb"))
 
         temp_df = df[df.label.isin(children)].reset_index(drop=True)
         temp_coarse_lbls = [p] * len(temp_df.text.values)
