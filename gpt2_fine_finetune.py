@@ -82,6 +82,14 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                 print("Coarse sentence", coarse_tokenizer.decode(batch_coarse_input_ids[b, :]))
                 raise Exception("Fine and Coarse mask is not same")
 
+            fine_dec_sent = fine_tokenizer.decode(batch_fine_input_ids[b, :][doc_start_ind:])
+            coarse_dec_sent = coarse_tokenizer.decode(batch_coarse_input_ids[b, :][doc_start_ind:])
+
+            if fine_dec_sent != coarse_dec_sent:
+                print("Fine sentence ", fine_tokenizer.decode(batch_fine_input_ids[b, :][doc_start_ind:]))
+                print("Coarse sentence ", coarse_tokenizer.decode(batch_coarse_input_ids[b, :][doc_start_ind:]))
+                raise Exception("Fine and Coarse decoded sentence is not same")
+
             fine_maski = fine_mask.unsqueeze(-1).expand_as(fine_logits_ind)
             coarse_maski = coarse_mask.unsqueeze(-1).expand_as(coarse_logits_ind)
             # unpad_seq_len x |V|
