@@ -419,35 +419,29 @@ if __name__ == "__main__":
     else:
         device = torch.device("cpu")
 
-    df_fine = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
-    parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
+    df = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
+    df_train, df_test = train_test_split(df, test_size=0.1, stratify=df["label"], random_state=42)
 
-    for p in parent_to_child:
-        print("Training for", p)
-        children = parent_to_child[p]
-        df = df_fine[df_fine["label"].isin(children)].reset_index(drop=True)
-        df_train, df_test = train_test_split(df, test_size=0.1, stratify=df["label"], random_state=42)
+    # df_train = preprocess_df(df_train)
 
-        # df_train = preprocess_df(df_train)
+    # Tokenize all of the sentences and map the tokens to their word IDs.
+    print('Loading BERT tokenizer...', flush=True)
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
-        # Tokenize all of the sentences and map the tokens to their word IDs.
-        print('Loading BERT tokenizer...', flush=True)
-        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+    label_set = set(df_train.label.values)
+    label_to_index = {}
+    index_to_label = {}
+    for i, l in enumerate(list(label_set)):
+        label_to_index[l] = i
+        index_to_label[i] = l
 
-        label_set = set(df_train.label.values)
-        label_to_index = {}
-        index_to_label = {}
-        for i, l in enumerate(list(label_set)):
-            label_to_index[l] = i
-            index_to_label[i] = l
+    input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_train, label_to_index)
 
-        input_ids, attention_masks, labels = bert_tokenize(tokenizer, df_train, label_to_index)
+    # Combine the training inputs into a TensorDataset.
+    dataset = TensorDataset(input_ids, attention_masks, labels)
 
-        # Combine the training inputs into a TensorDataset.
-        dataset = TensorDataset(input_ids, attention_masks, labels)
+    # Create a 90-10 train-validation split.
+    train_dataloader, validation_dataloader = create_data_loaders(dataset)
 
-        # Create a 90-10 train-validation split.
-        train_dataloader, validation_dataloader = create_data_loaders(dataset)
-
-        model = train(train_dataloader, validation_dataloader, device, num_labels=len(label_to_index))
-        test(df_test, label_to_index, index_to_label)
+    model = train(train_dataloader, validation_dataloader, device, num_labels=len(label_to_index))
+    test(df_test, label_to_index, index_to_label)
