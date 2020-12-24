@@ -5,6 +5,30 @@ from transformers import GPT2Tokenizer
 import pandas as pd
 
 
+# def generate(l, tokenizer, model, pad_token_dict, num_samples=1000):
+#     model.eval()
+#     temp_list = ["<|labelpad|>"] * pad_token_dict[l]
+#     if len(temp_list) > 0:
+#         label_str = " ".join(l.split("_")) + " " + " ".join(temp_list)
+#     else:
+#         label_str = " ".join(l.split("_"))
+#     text = tokenizer.bos_token + " " + label_str + " <|labelsep|> "
+#
+#     sents = []
+#     for i in range(num_samples):
+#         sample_outputs = model.generate(
+#             input_ids=tokenizer.encode(text, return_tensors='pt').to(device),
+#             do_sample=True,
+#             top_k=50,
+#             max_length=200,
+#             top_p=0.95,
+#             num_return_sequences=1
+#         )
+#         for i, sample_output in enumerate(sample_outputs):
+#             # print("{}: {}".format(i, tokenizer.decode(sample_output)))
+#             sents.append(tokenizer.decode(sample_output))
+#     return sents
+
 def generate(l, tokenizer, model, pad_token_dict, num_samples=1000):
     model.eval()
     temp_list = ["<|labelpad|>"] * pad_token_dict[l]
@@ -12,12 +36,14 @@ def generate(l, tokenizer, model, pad_token_dict, num_samples=1000):
         label_str = " ".join(l.split("_")) + " " + " ".join(temp_list)
     else:
         label_str = " ".join(l.split("_"))
-    text = tokenizer.bos_token + " " + label_str + " <|labelsep|> "
+    text = label_str + " <|labelsep|> "
+    encoded_dict = tokenizer.encode_plus(text, return_tensors='pt')
+    ids = torch.tensor([[tokenizer.bos_token_id] + encoded_dict['input_ids'].data.tolist()[0]]).to(device)
 
     sents = []
     for i in range(num_samples):
         sample_outputs = model.generate(
-            input_ids=tokenizer.encode(text, return_tensors='pt').to(device),
+            input_ids=ids,
             do_sample=True,
             top_k=50,
             max_length=200,
@@ -52,7 +78,7 @@ if __name__ == "__main__":
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
 
-    base_fine_path = pkl_dump_dir + "gpt2/fine_tok_fixed/"
+    base_fine_path = pkl_dump_dir + "gpt2/fine/"
 
     use_gpu = int(sys.argv[1])
     # use_gpu = False
@@ -73,7 +99,7 @@ if __name__ == "__main__":
         fine_tok_path = fine_label_path + "/tokenizer"
         fine_model_path = fine_label_path + "/model/"
 
-        pad_token_dict = pickle.load(open(fine_label_path + "pad_token_dict.pkl", "rb"))
+        pad_token_dict = pickle.load(open(fine_label_path + "/pad_token_dict.pkl", "rb"))
 
         fine_tokenizer = GPT2Tokenizer.from_pretrained(fine_tok_path, do_lower_case=True)
         fine_model = torch.load(fine_model_path + p + ".pt", map_location=device)
