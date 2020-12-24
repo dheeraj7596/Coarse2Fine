@@ -419,6 +419,9 @@ if __name__ == "__main__":
     else:
         device = torch.device("cpu")
 
+    # df_train = pickle.load(open(pkl_dump_dir + "df_fine_weaksup.pkl", "rb"))
+    # df_test = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
+
     df = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
     df_train, df_test = train_test_split(df, test_size=0.1, stratify=df["label"], random_state=42)
 
