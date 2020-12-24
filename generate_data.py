@@ -15,18 +15,17 @@ import pandas as pd
 #     text = tokenizer.bos_token + " " + label_str + " <|labelsep|> "
 #
 #     sents = []
-#     for i in range(num_samples):
-#         sample_outputs = model.generate(
-#             input_ids=tokenizer.encode(text, return_tensors='pt').to(device),
-#             do_sample=True,
-#             top_k=50,
-#             max_length=200,
-#             top_p=0.95,
-#             num_return_sequences=1
-#         )
-#         for i, sample_output in enumerate(sample_outputs):
-#             # print("{}: {}".format(i, tokenizer.decode(sample_output)))
-#             sents.append(tokenizer.decode(sample_output))
+#     sample_outputs = model.generate(
+#         input_ids=tokenizer.encode(text, return_tensors='pt').to(device),
+#         do_sample=True,
+#         top_k=50,
+#         max_length=200,
+#         top_p=0.95,
+#         num_return_sequences=num_samples
+#     )
+#     for i, sample_output in enumerate(sample_outputs):
+#         # print("{}: {}".format(i, tokenizer.decode(sample_output)))
+#         sents.append(tokenizer.decode(sample_output))
 #     return sents
 
 def generate(l, tokenizer, model, pad_token_dict, num_samples=1000):
@@ -41,18 +40,17 @@ def generate(l, tokenizer, model, pad_token_dict, num_samples=1000):
     ids = torch.tensor([[tokenizer.bos_token_id] + encoded_dict['input_ids'].data.tolist()[0]]).to(device)
 
     sents = []
-    for i in range(num_samples):
-        sample_outputs = model.generate(
-            input_ids=ids,
-            do_sample=True,
-            top_k=50,
-            max_length=200,
-            top_p=0.95,
-            num_return_sequences=1
-        )
-        for i, sample_output in enumerate(sample_outputs):
-            # print("{}: {}".format(i, tokenizer.decode(sample_output)))
-            sents.append(tokenizer.decode(sample_output))
+    sample_outputs = model.generate(
+        input_ids=ids,
+        do_sample=True,
+        top_k=50,
+        max_length=200,
+        top_p=0.95,
+        num_return_sequences=num_samples
+    )
+    for i, sample_output in enumerate(sample_outputs):
+        # print("{}: {}".format(i, tokenizer.decode(sample_output)))
+        sents.append(tokenizer.decode(sample_output))
     return sents
 
 
@@ -73,16 +71,16 @@ def post_process(sentences):
 
 
 if __name__ == "__main__":
-    # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
-    basepath = "/data4/dheeraj/coarse2fine/"
+    basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
+    # basepath = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
 
     base_fine_path = pkl_dump_dir + "gpt2/fine/"
 
-    use_gpu = int(sys.argv[1])
-    # use_gpu = False
-    gpu_id = int(sys.argv[2])
+    # use_gpu = int(sys.argv[1])
+    use_gpu = False
+    # gpu_id = int(sys.argv[2])
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
