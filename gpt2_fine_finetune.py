@@ -460,8 +460,8 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         )
 
         # todo make temp_df, fine_input_ids, fine_attention_masks class variables.
-        true, preds, _ = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
-                              index_to_label, label_to_index, list(temp_df.label.values), device)
+        # true, preds, _ = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
+        #                       index_to_label, label_to_index, list(temp_df.label.values), device)
 
     print("", flush=True)
     print("Training complete!", flush=True)
@@ -618,7 +618,7 @@ if __name__ == "__main__":
 
     all_true = []
     all_preds = []
-    for p in ["arts"]:
+    for p in ["science"]:
         print("Training coarse label:", p)
         fine_label_path = base_fine_path + p
         os.makedirs(fine_label_path, exist_ok=True)
@@ -687,10 +687,10 @@ if __name__ == "__main__":
                                            device,
                                            secondary_device)
         test_generate(fine_model, fine_tokenizer, children, pad_token_dict, device)
-        true, preds, _ = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
-                              index_to_label, label_to_index, list(temp_df.label.values), device)
-        all_true += true
-        all_preds += preds
+        # true, preds, _ = test(fine_model, fine_posterior, fine_input_ids, fine_attention_masks, doc_start_ind,
+        #                       index_to_label, label_to_index, list(temp_df.label.values), device)
+        # all_true += true
+        # all_preds += preds
 
         fine_tokenizer.save_pretrained(fine_tok_path)
         torch.save(fine_model, fine_model_path + p + ".pt")
@@ -700,5 +700,5 @@ if __name__ == "__main__":
 
         print("*" * 80)
 
-    print(classification_report(all_true, all_preds), flush=True)
+    # print(classification_report(all_true, all_preds), flush=True)
     print("*" * 80, flush=True)
