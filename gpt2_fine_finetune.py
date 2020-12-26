@@ -198,7 +198,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         # del batch_fine_input_ids
         # del batch_coarse_input_ids
         # torch.cuda.empty_cache()
-        if not is_val:
+        if not is_val and lambda_1:
             cross_ent_loss = calculate_cross_entropy_loss(fine_model, label_to_exclusive_dataloader, doc_start_ind,
                                                           device, secondary_device)
             print("KL-loss", kl_div_loss.item(), "CE-loss", cross_ent_loss.item())
@@ -336,7 +336,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   doc_start_ind,
                                   device,
                                   secondary_device,
-                                  lambda_1=compute_lambda(global_step, max_steps=500))
+                                  lambda_1=compute_lambda(global_step, max_steps=1000))
             # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
             print("Loss:", loss.item(), flush=True)
@@ -436,7 +436,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   device,
                                   secondary_device,
                                   is_val=True,
-                                  lambda_1=compute_lambda(global_step, max_steps=500))
+                                  lambda_1=compute_lambda(global_step, max_steps=1000))
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
@@ -618,7 +618,7 @@ if __name__ == "__main__":
 
     all_true = []
     all_preds = []
-    for p in ["science"]:
+    for p in ["sports"]:
         print("Training coarse label:", p)
         fine_label_path = base_fine_path + p
         os.makedirs(fine_label_path, exist_ok=True)
