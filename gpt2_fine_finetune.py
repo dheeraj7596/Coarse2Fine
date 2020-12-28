@@ -198,7 +198,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         # del batch_fine_input_ids
         # del batch_coarse_input_ids
         # torch.cuda.empty_cache()
-        if not is_val and lambda_1:
+        if not is_val:
             cross_ent_loss = calculate_cross_entropy_loss(fine_model, label_to_exclusive_dataloader, doc_start_ind,
                                                           device, secondary_device)
             print("KL-loss", kl_div_loss.item(), "CE-loss", cross_ent_loss.item())
@@ -207,9 +207,9 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
             print("KL-loss", kl_div_loss.item(), "CE-loss", cross_ent_loss)
         return (1 - lambda_1) * kl_div_loss + lambda_1 * cross_ent_loss
 
-    def compute_lambda(step, max_steps):
+    def compute_lambda(step, stop_step, max_steps):
         temp = 1 - step / max_steps
-        if temp < 0:
+        if temp < 0 or step >= stop_step:
             return 0
         else:
             return temp
@@ -336,7 +336,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   doc_start_ind,
                                   device,
                                   secondary_device,
-                                  lambda_1=compute_lambda(global_step, max_steps=1000))
+                                  lambda_1=compute_lambda(global_step, stop_step=7775, max_steps=7775))
             # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
             print("Loss:", loss.item(), flush=True)
@@ -436,7 +436,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   device,
                                   secondary_device,
                                   is_val=True,
-                                  lambda_1=compute_lambda(global_step, max_steps=1000))
+                                  lambda_1=compute_lambda(global_step, stop_step=7775, max_steps=7775))
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
