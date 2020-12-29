@@ -411,8 +411,10 @@ if __name__ == "__main__":
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
 
-    tok_path = pkl_dump_dir + "bert/tokenizer"
-    model_path = pkl_dump_dir + "bert/model"
+    p = "sports"
+
+    tok_path = pkl_dump_dir + "bert/" + p + "/tokenizer"
+    model_path = pkl_dump_dir + "bert/" + p + "/model"
     os.makedirs(tok_path, exist_ok=True)
     os.makedirs(model_path, exist_ok=True)
 
@@ -420,7 +422,6 @@ if __name__ == "__main__":
     gpu_id = int(sys.argv[2])
     # use_gpu = False
 
-    p = "science"
     df_train = pickle.load(open(pkl_dump_dir + "df_gen_" + p + ".pkl", "rb"))
     df_fine = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
     df_test = df_fine[df_fine["label"].isin(list(set(df_train.label.values)))].reset_index(drop=True)
@@ -453,3 +454,6 @@ if __name__ == "__main__":
 
     model = train(train_dataloader, validation_dataloader, device, num_labels=len(label_to_index))
     test(df_test, label_to_index, index_to_label)
+
+    tokenizer.save_pretrained(tok_path)
+    torch.save(model, model_path + "/model.pt")
