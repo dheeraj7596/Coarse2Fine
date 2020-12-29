@@ -40,17 +40,19 @@ def generate(l, tokenizer, model, pad_token_dict, num_samples=1000):
     ids = torch.tensor([[tokenizer.bos_token_id] + encoded_dict['input_ids'].data.tolist()[0]]).to(device)
 
     sents = []
-    sample_outputs = model.generate(
-        input_ids=ids,
-        do_sample=True,
-        top_k=50,
-        max_length=200,
-        top_p=0.95,
-        num_return_sequences=num_samples
-    )
-    for i, sample_output in enumerate(sample_outputs):
-        # print("{}: {}".format(i, tokenizer.decode(sample_output)))
-        sents.append(tokenizer.decode(sample_output))
+    its = num_samples / 500
+    for it in range(int(its)):
+        sample_outputs = model.generate(
+            input_ids=ids,
+            do_sample=True,
+            top_k=50,
+            max_length=200,
+            top_p=0.95,
+            num_return_sequences=500
+        )
+        for i, sample_output in enumerate(sample_outputs):
+            # print("{}: {}".format(i, tokenizer.decode(sample_output)))
+            sents.append(tokenizer.decode(sample_output))
     return sents
 
 
@@ -92,7 +94,7 @@ if __name__ == "__main__":
 
     all_sents = []
     all_labels = []
-    for p in ["arts"]:
+    for p in ["sports"]:
         fine_label_path = base_fine_path + p
         fine_tok_path = fine_label_path + "/tokenizer"
         fine_model_path = fine_label_path + "/model/"
@@ -104,7 +106,7 @@ if __name__ == "__main__":
 
         children = parent_to_child[p]
         for ch in children:
-            num = 500
+            num = 1500
             sentences = generate(ch, fine_tokenizer, fine_model, pad_token_dict, num_samples=num)
             sentences = post_process(sentences)
             labels = [ch] * num
