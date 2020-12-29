@@ -336,7 +336,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   doc_start_ind,
                                   device,
                                   secondary_device,
-                                  lambda_1=compute_lambda(global_step, stop_step=7775, max_steps=7775))
+                                  lambda_1=compute_lambda(global_step, stop_step=4420, max_steps=4420))
             # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
             print("Loss:", loss.item(), flush=True)
@@ -436,7 +436,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   device,
                                   secondary_device,
                                   is_val=True,
-                                  lambda_1=compute_lambda(global_step, stop_step=7775, max_steps=7775))
+                                  lambda_1=compute_lambda(global_step, stop_step=4420, max_steps=4420))
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
@@ -578,7 +578,6 @@ if __name__ == "__main__":
     basepath = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
-    exclusive_df_dir = pkl_dump_dir + "exclusive/"
 
     base_fine_path = pkl_dump_dir + "gpt2/fine/"
 
@@ -590,6 +589,12 @@ if __name__ == "__main__":
     # use_gpu = False
     gpu_id = int(sys.argv[2])
     secondary_gpu_id = int(sys.argv[3])
+    iteration = int(sys.argv[4])
+
+    if iteration == 1:
+        exclusive_df_dir = pkl_dump_dir + "exclusive/"
+    else:
+        exclusive_df_dir = pkl_dump_dir + "exclusive_secondit/"
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
@@ -618,7 +623,7 @@ if __name__ == "__main__":
 
     all_true = []
     all_preds = []
-    for p in ["sports"]:
+    for p in ["business"]:
         print("Training coarse label:", p)
         fine_label_path = base_fine_path + p
         os.makedirs(fine_label_path, exist_ok=True)
@@ -663,8 +668,10 @@ if __name__ == "__main__":
         label_to_exclusive_dataloader = {}
         for ch in children:
             child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
-            if len(child_df) > 30:
-                child_df = child_df.sample(n=30, random_state=42).reset_index(drop=True)
+            if iteration == 1:
+                if len(child_df) > 30:
+                    child_df = child_df.sample(n=30, random_state=42).reset_index(drop=True)
+
             temp_child_lbls = [ch] * len(child_df.text.values)
             child_exc_input_ids, child_exc_attention_masks = basic_gpt2_tokenize(fine_tokenizer, child_df.text.values,
                                                                                  temp_child_lbls, pad_token_dict)

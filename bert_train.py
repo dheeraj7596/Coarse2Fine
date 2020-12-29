@@ -506,6 +506,10 @@ if __name__ == "__main__":
     model = train(train_dataloader, validation_dataloader, device, num_labels=len(label_to_index))
     true, preds, pred_probs = test(df_test, label_to_index, index_to_label)
     high_quality_inds = get_high_quality_inds(true, preds, pred_probs, label_to_index)
+    for p in high_quality_inds:
+        inds = high_quality_inds[p]
+        temp_df = df_test.loc[inds].reset_index(drop=True)
+        pickle.dump(temp_df, open(pkl_dump_dir + "exclusive_secondit/" + index_to_label[p] + ".pkl", "wb"))
 
     tokenizer.save_pretrained(tok_path)
     torch.save(model, model_path + "/model.pt")
