@@ -372,7 +372,7 @@ def evaluate(model, prediction_dataloader, device):
         logits = outputs[0]
 
         # Move logits and labels to CPU
-        logits = logits.detach().cpu().numpy()
+        logits = torch.softmax(logits, dim=-1).detach().cpu().numpy()
         label_ids = b_labels.to('cpu').numpy()
 
         # Store predictions and true labels
@@ -392,7 +392,12 @@ def test(df_test_original, label_to_index, index_to_label):
     prediction_dataloader = DataLoader(prediction_data, sampler=prediction_sampler, batch_size=batch_size)
     predictions, true_labels = evaluate(model, prediction_dataloader, device)
     preds = []
-    for pred in predictions:
+    for i, pred in enumerate(predictions):
+        if i == 0:
+            pred_probs = pred
+        else:
+            pred_probs = np.concatenate((pred_probs, pred))
+
         preds = preds + list(pred.argmax(axis=-1))
     true = []
     for t in true_labels:
@@ -403,6 +408,52 @@ def test(df_test_original, label_to_index, index_to_label):
         preds[i] = index_to_label[preds[i]]
 
     print(classification_report(true, preds), flush=True)
+    return true, preds, pred_probs
+
+
+def get_high_quality_inds(true, preds, pred_probs, label_to_index, threshold=0.7):
+    pred_inds = []
+    for p in preds:
+        pred_inds.append(label_to_index[p])
+
+    pred_label_to_inds = {}
+    for i, p in enumerate(pred_inds):
+        try:
+            pred_label_to_inds[p].append(i)
+        except:
+            pred_label_to_inds[p] = [i]
+
+    label_to_probs = {}
+    min_ct = float("inf")
+    for p in pred_label_to_inds:
+        label_to_probs[p] = []
+        ct_thresh = 0
+        for ind in pred_label_to_inds[p]:
+            temp = pred_probs[ind][p]
+            if temp >= threshold:
+                ct_thresh += 1
+            label_to_probs[p].append(temp)
+        min_ct = min(min_ct, ct_thresh)
+
+    print("Collecting", min_ct, "samples as high quality")
+    final_inds = {}
+    for p in label_to_probs:
+        probs = label_to_probs[p]
+        inds = np.array(probs).argsort()[-min_ct:][::-1]
+        final_inds[p] = []
+        for i in inds:
+            final_inds[p].append(pred_label_to_inds[p][i])
+
+    temp_true = []
+    temp_preds = []
+    for p in final_inds:
+        for ind in final_inds[p]:
+            temp_true.append(true[ind])
+            temp_preds.append(preds[ind])
+
+    print("Classification Report of High Quality data")
+    print(classification_report(temp_true, temp_preds), flush=True)
+    return final_inds
 
 
 if __name__ == "__main__":
@@ -411,7 +462,7 @@ if __name__ == "__main__":
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
 
-    p = "sports"
+    p = "business"
 
     tok_path = pkl_dump_dir + "bert/" + p + "/tokenizer"
     model_path = pkl_dump_dir + "bert/" + p + "/model"
@@ -453,7 +504,8 @@ if __name__ == "__main__":
         device = torch.device("cpu")
 
     model = train(train_dataloader, validation_dataloader, device, num_labels=len(label_to_index))
-    test(df_test, label_to_index, index_to_label)
+    true, preds, pred_probs = test(df_test, label_to_index, index_to_label)
+    high_quality_inds = get_high_quality_inds(true, preds, pred_probs, label_to_index)
 
     tokenizer.save_pretrained(tok_path)
     torch.save(model, model_path + "/model.pt")
