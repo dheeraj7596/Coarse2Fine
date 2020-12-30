@@ -513,6 +513,7 @@ if __name__ == "__main__":
         for p in high_quality_inds:
             inds = high_quality_inds[p]
             temp_df = df_test.loc[inds].reset_index(drop=True)
+            os.makedirs(pkl_dump_dir + "exclusive_" + str(iteration + 1) + "it", exist_ok=True)
             pickle.dump(temp_df,
                         open(pkl_dump_dir + "exclusive_" + str(iteration + 1) + "it/" + index_to_label[p] + ".pkl",
                              "wb"))
