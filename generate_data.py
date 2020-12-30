@@ -83,6 +83,8 @@ if __name__ == "__main__":
     use_gpu = int(sys.argv[1])
     # use_gpu = False
     gpu_id = int(sys.argv[2])
+    p = sys.argv[3]
+    num = int(sys.argv[4])
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
@@ -106,7 +108,6 @@ if __name__ == "__main__":
 
         children = parent_to_child[p]
         for ch in children:
-            num = 1500
             sentences = generate(ch, fine_tokenizer, fine_model, pad_token_dict, num_samples=num)
             sentences = post_process(sentences)
             labels = [ch] * num
