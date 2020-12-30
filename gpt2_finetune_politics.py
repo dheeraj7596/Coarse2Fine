@@ -116,7 +116,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         b_input_mask_list = []
         scores_list = []
 
-        selected_labs = random.sample(list(label_to_exclusive_dataloader.keys()), 7)
+        selected_labs = random.sample(list(label_to_exclusive_dataloader.keys()), 6)
         print(selected_labs)
         for l in selected_labs:
             # print("Label", l)
