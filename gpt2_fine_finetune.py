@@ -108,10 +108,8 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         losses = torch.cat(losses, dim=0)
         return losses.mean()
 
-    def calculate_cross_entropy_loss(fine_model, label_to_exclusive_dataloader, doc_start_ind, device,
-                                     secondary_device):
+    def calculate_cross_entropy_loss(fine_model, label_to_exclusive_dataloader, doc_start_ind, device):
         loss_function = CrossEntropyLoss()
-        fine_model.to(secondary_device)
 
         b_labels_list = []
         b_input_ids_list = []
@@ -124,9 +122,9 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
             it = 0
             for step, batch in dataloader:
                 # print("Step for exc", step, it)
-                b_input_ids = batch[0].to(secondary_device)
-                b_labels = batch[0].to(secondary_device)
-                b_input_mask = batch[1].to(secondary_device)
+                b_input_ids = batch[0].to(device)
+                b_labels = batch[0].to(device)
+                b_input_mask = batch[1].to(device)
 
                 outputs = fine_model(b_input_ids,
                                      token_type_ids=None,
@@ -170,7 +168,6 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         logits_collected = torch.cat(logits_collected, dim=0)
         labels_collected = torch.cat(labels_collected, dim=0)
         loss = loss_function(logits_collected, labels_collected).to(device)
-        fine_model.to(device)
         return loss
 
     def calculate_loss(batch_fine_probs,
@@ -185,7 +182,6 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                        label_to_exclusive_dataloader,
                        doc_start_ind,
                        device,
-                       secondary_device,
                        lambda_1=5,
                        is_val=False):
         kl_div_loss = calculate_kl_div_loss(batch_fine_probs, batch_coarse_probs, batch_fine_input_masks,
@@ -200,7 +196,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         # torch.cuda.empty_cache()
         if not is_val:
             cross_ent_loss = calculate_cross_entropy_loss(fine_model, label_to_exclusive_dataloader, doc_start_ind,
-                                                          device, secondary_device)
+                                                          device)
             print("KL-loss", kl_div_loss.item(), "CE-loss", cross_ent_loss.item())
         else:
             cross_ent_loss = 0
@@ -335,7 +331,6 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   label_to_exclusive_dataloader,
                                   doc_start_ind,
                                   device,
-                                  secondary_device,
                                   lambda_1=compute_lambda(global_step, max_steps=len(train_dataloader) * epochs))
             # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
@@ -434,7 +429,6 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   label_to_exclusive_dataloader,
                                   doc_start_ind,
                                   device,
-                                  secondary_device,
                                   is_val=True,
                                   lambda_1=compute_lambda(global_step, max_steps=len(train_dataloader) * epochs))
             total_eval_loss += loss.item()
