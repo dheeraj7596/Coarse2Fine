@@ -207,9 +207,9 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
             print("KL-loss", kl_div_loss.item(), "CE-loss", cross_ent_loss)
         return (1 - lambda_1) * kl_div_loss + lambda_1 * cross_ent_loss
 
-    def compute_lambda(step, stop_step, max_steps):
+    def compute_lambda(step, max_steps):
         temp = 1 - step / max_steps
-        if temp < 0 or step >= stop_step:
+        if temp < 0:
             return 0
         else:
             return temp
@@ -336,7 +336,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   doc_start_ind,
                                   device,
                                   secondary_device,
-                                  lambda_1=compute_lambda(global_step, stop_step=4420, max_steps=4420))
+                                  lambda_1=compute_lambda(global_step, max_steps=len(train_dataloader) * epochs))
             # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
             print("Loss:", loss.item(), flush=True)
@@ -436,7 +436,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   device,
                                   secondary_device,
                                   is_val=True,
-                                  lambda_1=compute_lambda(global_step, stop_step=4420, max_steps=4420))
+                                  lambda_1=compute_lambda(global_step, max_steps=len(train_dataloader) * epochs))
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
@@ -589,12 +589,14 @@ if __name__ == "__main__":
     # use_gpu = False
     gpu_id = int(sys.argv[2])
     secondary_gpu_id = int(sys.argv[3])
-    iteration = int(sys.argv[4])
+    parent_label = sys.argv[4]
+    iteration = int(sys.argv[5])
+    n = int(sys.argv[6])
 
     if iteration == 1:
         exclusive_df_dir = pkl_dump_dir + "exclusive/"
     else:
-        exclusive_df_dir = pkl_dump_dir + "exclusive_secondit/"
+        exclusive_df_dir = pkl_dump_dir + "exclusive_" + str(iteration) + "it/"
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
@@ -623,7 +625,7 @@ if __name__ == "__main__":
 
     all_true = []
     all_preds = []
-    for p in ["business"]:
+    for p in [parent_label]:
         print("Training coarse label:", p)
         fine_label_path = base_fine_path + p
         os.makedirs(fine_label_path, exist_ok=True)
@@ -669,8 +671,8 @@ if __name__ == "__main__":
         for ch in children:
             child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
             if iteration == 1:
-                if len(child_df) > 30:
-                    child_df = child_df.sample(n=30, random_state=42).reset_index(drop=True)
+                if len(child_df) > n:
+                    child_df = child_df.sample(n=n, random_state=42).reset_index(drop=True)
 
             temp_child_lbls = [ch] * len(child_df.text.values)
             child_exc_input_ids, child_exc_attention_masks = basic_gpt2_tokenize(fine_tokenizer, child_df.text.values,
