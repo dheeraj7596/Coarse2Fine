@@ -41,18 +41,31 @@ def generate(l, tokenizer, model, pad_token_dict, num_samples=1000):
 
     sents = []
     its = num_samples / 500
-    for it in range(int(its)):
+    if its < 1:
         sample_outputs = model.generate(
             input_ids=ids,
             do_sample=True,
             top_k=50,
             max_length=200,
             top_p=0.95,
-            num_return_sequences=500
+            num_return_sequences=num_samples
         )
         for i, sample_output in enumerate(sample_outputs):
             # print("{}: {}".format(i, tokenizer.decode(sample_output)))
             sents.append(tokenizer.decode(sample_output))
+    else:
+        for it in range(int(its)):
+            sample_outputs = model.generate(
+                input_ids=ids,
+                do_sample=True,
+                top_k=50,
+                max_length=200,
+                top_p=0.95,
+                num_return_sequences=500
+            )
+            for i, sample_output in enumerate(sample_outputs):
+                # print("{}: {}".format(i, tokenizer.decode(sample_output)))
+                sents.append(tokenizer.decode(sample_output))
     return sents
 
 
