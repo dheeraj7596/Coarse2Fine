@@ -376,9 +376,9 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
         # Evaluate data for one epoch
         for batch in validation_dataloader:
             # batch contains -> coarse_input_ids, coarse_attention_masks, fine_input_ids, fine_attention_masks
-            b_coarse_input_ids = batch[0].to(device)
-            b_coarse_labels = batch[0].to(device)
-            b_coarse_input_mask = batch[1].to(device)
+            b_coarse_input_ids = batch[0].to(secondary_device)
+            b_coarse_labels = batch[0].to(secondary_device)
+            b_coarse_input_mask = batch[1].to(secondary_device)
 
             b_size = b_coarse_input_ids.shape[0]
 
@@ -392,7 +392,10 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                        attention_mask=b_coarse_input_mask,
                                        labels=b_coarse_labels)
 
-                batch_coarse_probs = torch.softmax(outputs[1], dim=-1)  # (b_size, seq_len, |V|)
+                batch_coarse_probs = torch.softmax(outputs[1], dim=-1).to(device)  # (b_size, seq_len, |V|)
+
+                b_coarse_input_ids = b_coarse_input_ids.to(device)
+                b_coarse_input_mask = b_coarse_input_mask.to(device)
 
                 batch_fine_probs = []
                 batch_fine_input_masks = []
