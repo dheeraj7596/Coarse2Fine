@@ -83,7 +83,7 @@ if __name__ == "__main__":
     use_gpu = int(sys.argv[1])
     # use_gpu = False
     gpu_id = int(sys.argv[2])
-    p = sys.argv[3]
+    parent_label = sys.argv[3]
     num = int(sys.argv[4])
 
     # Tell pytorch to run this model on the GPU.
@@ -96,7 +96,7 @@ if __name__ == "__main__":
 
     all_sents = []
     all_labels = []
-    for p in ["sports"]:
+    for p in [parent_label]:
         fine_label_path = base_fine_path + p
         fine_tok_path = fine_label_path + "/tokenizer"
         fine_model_path = fine_label_path + "/model/"
