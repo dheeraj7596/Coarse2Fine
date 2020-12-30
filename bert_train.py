@@ -462,15 +462,17 @@ if __name__ == "__main__":
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
 
-    p = "business"
+    use_gpu = int(sys.argv[1])
+    gpu_id = int(sys.argv[2])
+    iteration = int(sys.argv[3])
+    p = sys.argv[4]
+    dump_flag = sys.argv[5]
 
     tok_path = pkl_dump_dir + "bert/" + p + "/tokenizer"
     model_path = pkl_dump_dir + "bert/" + p + "/model"
     os.makedirs(tok_path, exist_ok=True)
     os.makedirs(model_path, exist_ok=True)
 
-    use_gpu = int(sys.argv[1])
-    gpu_id = int(sys.argv[2])
     # use_gpu = False
 
     df_train = pickle.load(open(pkl_dump_dir + "df_gen_" + p + ".pkl", "rb"))
@@ -506,10 +508,14 @@ if __name__ == "__main__":
     model = train(train_dataloader, validation_dataloader, device, num_labels=len(label_to_index))
     true, preds, pred_probs = test(df_test, label_to_index, index_to_label)
     high_quality_inds = get_high_quality_inds(true, preds, pred_probs, label_to_index)
-    for p in high_quality_inds:
-        inds = high_quality_inds[p]
-        temp_df = df_test.loc[inds].reset_index(drop=True)
-        pickle.dump(temp_df, open(pkl_dump_dir + "exclusive_secondit/" + index_to_label[p] + ".pkl", "wb"))
+
+    if dump_flag:
+        for p in high_quality_inds:
+            inds = high_quality_inds[p]
+            temp_df = df_test.loc[inds].reset_index(drop=True)
+            pickle.dump(temp_df,
+                        open(pkl_dump_dir + "exclusive_" + str(iteration + 1) + "it/" + index_to_label[p] + ".pkl",
+                             "wb"))
 
     tokenizer.save_pretrained(tok_path)
     torch.save(model, model_path + "/model.pt")
