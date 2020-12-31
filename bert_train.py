@@ -468,7 +468,6 @@ if __name__ == "__main__":
     iteration = int(sys.argv[3])
     p = sys.argv[4]
     dump_flag = sys.argv[5]
-    n = int(sys.argv[6])
 
     tok_path = pkl_dump_dir + "bert/" + p + "/tokenizer"
     model_path = pkl_dump_dir + "bert/" + p + "/model"
@@ -482,15 +481,14 @@ if __name__ == "__main__":
     df_test = df_fine[df_fine["label"].isin(list(set(df_train.label.values)))].reset_index(drop=True)
 
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
-    if iteration == 1:
-        exclusive_df_dir = pkl_dump_dir + "exclusive/"
-    else:
-        exclusive_df_dir = pkl_dump_dir + "exclusive_" + str(iteration) + "it/"
 
     for ch in parent_to_child[p]:
-        child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
-        if len(child_df) > n:
-            child_df = child_df.sample(n=n, random_state=42).reset_index(drop=True)
+        for i in range(1, iteration + 1):
+            temp_child_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(i) + "it/" + ch + ".pkl", "rb"))
+            if i == 1:
+                child_df = temp_child_df
+            else:
+                child_df = pd.concat([child_df, temp_child_df])
         child_df["label"] = [ch] * len(child_df)
         df_train = pd.concat([df_train, child_df])
 

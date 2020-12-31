@@ -12,6 +12,7 @@ import random
 import time
 import os
 import copy
+import pandas as pd
 from pytorch_memlab import MemReporter
 
 
@@ -593,12 +594,6 @@ if __name__ == "__main__":
     secondary_gpu_id = int(sys.argv[3])
     parent_label = sys.argv[4]
     iteration = int(sys.argv[5])
-    n = int(sys.argv[6])
-
-    if iteration == 1:
-        exclusive_df_dir = pkl_dump_dir + "exclusive/"
-    else:
-        exclusive_df_dir = pkl_dump_dir + "exclusive_" + str(iteration) + "it/"
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
@@ -671,11 +666,12 @@ if __name__ == "__main__":
 
         label_to_exclusive_dataloader = {}
         for ch in children:
-            child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
-            if iteration == 1:
-                if len(child_df) > n:
-                    child_df = child_df.sample(n=n, random_state=42).reset_index(drop=True)
-
+            for i in range(1, iteration + 1):
+                temp_child_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(i) + "it/" + ch + ".pkl", "rb"))
+                if i == 1:
+                    child_df = temp_child_df
+                else:
+                    child_df = pd.concat([child_df, temp_child_df])
             temp_child_lbls = [ch] * len(child_df.text.values)
             child_exc_input_ids, child_exc_attention_masks = basic_gpt2_tokenize(fine_tokenizer, child_df.text.values,
                                                                                  temp_child_lbls, pad_token_dict)
