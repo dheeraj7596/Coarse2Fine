@@ -489,11 +489,10 @@ if __name__ == "__main__":
 
     for ch in parent_to_child[p]:
         child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
-        if iteration == 1:
-            if len(child_df) > n:
-                child_df = child_df.sample(n=n, random_state=42).reset_index(drop=True)
-            child_df["label"] = [ch] * len(child_df)
-            df_train = pd.concat([df_train, child_df])
+        if len(child_df) > n:
+            child_df = child_df.sample(n=n, random_state=42).reset_index(drop=True)
+        child_df["label"] = [ch] * len(child_df)
+        df_train = pd.concat([df_train, child_df])
 
     print(df_train.label.value_counts())
     # df_train = preprocess_df(df_train)
