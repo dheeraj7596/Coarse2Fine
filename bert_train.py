@@ -14,6 +14,7 @@ import os
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 import copy
+import pandas as pd
 
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "5"
@@ -467,6 +468,7 @@ if __name__ == "__main__":
     iteration = int(sys.argv[3])
     p = sys.argv[4]
     dump_flag = sys.argv[5]
+    n = int(sys.argv[6])
 
     tok_path = pkl_dump_dir + "bert/" + p + "/tokenizer"
     model_path = pkl_dump_dir + "bert/" + p + "/model"
@@ -478,6 +480,22 @@ if __name__ == "__main__":
     df_train = pickle.load(open(pkl_dump_dir + "df_gen_" + p + ".pkl", "rb"))
     df_fine = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
     df_test = df_fine[df_fine["label"].isin(list(set(df_train.label.values)))].reset_index(drop=True)
+
+    parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
+    if iteration == 1:
+        exclusive_df_dir = pkl_dump_dir + "exclusive/"
+    else:
+        exclusive_df_dir = pkl_dump_dir + "exclusive_" + str(iteration) + "it/"
+
+    for ch in parent_to_child[p]:
+        child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
+        if iteration == 1:
+            if len(child_df) > n:
+                child_df = child_df.sample(n=n, random_state=42).reset_index(drop=True)
+            child_df["label"] = [ch] * len(child_df)
+            df_train = pd.concat([df_train, child_df])
+
+    print(df_train.label.value_counts())
     # df_train = preprocess_df(df_train)
 
     # Tokenize all of the sentences and map the tokens to their word IDs.
