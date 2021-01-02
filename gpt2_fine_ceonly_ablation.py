@@ -8,13 +8,13 @@ from torch.utils.data import TensorDataset
 import numpy as np
 import random
 import os
+import pandas as pd
 
 if __name__ == "__main__":
     # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     basepath = "/data4/dheeraj/coarse2fine/"
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
-    exclusive_df_dir = pkl_dump_dir + "exclusive_gold/"
 
     base_fine_path = pkl_dump_dir + "gpt2/fine_ceonly/"
 
@@ -25,6 +25,8 @@ if __name__ == "__main__":
     use_gpu = int(sys.argv[1])
     # use_gpu = False
     gpu_id = int(sys.argv[2])
+    iteration = int(sys.argv[3])
+    parent_label = sys.argv[4]
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
@@ -46,10 +48,8 @@ if __name__ == "__main__":
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    for p in ["arts"]:
+    for p in [parent_label]:
         print("Training coarse label:", p)
-        df = pickle.load(open(pkl_dump_dir + p + "_gold.pkl", "rb"))
-
         fine_tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token='<|startoftext|>', pad_token='<|pad|>',
                                                        additional_special_tokens=['<|labelsep|>', '<|labelpad|>'])
         fine_model = GPT2LMHeadModel.from_pretrained('gpt2')
@@ -63,6 +63,11 @@ if __name__ == "__main__":
         for i, l in enumerate(list(children)):
             label_to_index[l] = i
             index_to_label[i] = l
+            temp_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(iteration) + "it/" + l + ".pkl", "rb"))
+            if i == 0:
+                df = temp_df
+            else:
+                df = pd.concat([df, temp_df])
 
         doc_start_ind, pad_token_dict = create_pad_token_dict(p, parent_to_child, coarse_tokenizer, fine_tokenizer)
         print(pad_token_dict, doc_start_ind)
