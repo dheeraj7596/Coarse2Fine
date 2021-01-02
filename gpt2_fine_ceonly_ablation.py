@@ -101,5 +101,6 @@ if __name__ == "__main__":
         torch.save(fine_model, fine_model_path + p + ".pt")
         pickle.dump(index_to_label, open(fine_label_path + "/index_to_label.pkl", "wb"))
         pickle.dump(label_to_index, open(fine_label_path + "/label_to_index.pkl", "wb"))
+        pickle.dump(pad_token_dict, open(fine_label_path + "/pad_token_dict.pkl", "wb"))
 
         print("*" * 80)
