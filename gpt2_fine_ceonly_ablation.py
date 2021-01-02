@@ -64,6 +64,7 @@ if __name__ == "__main__":
             label_to_index[l] = i
             index_to_label[i] = l
             temp_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(iteration) + "it/" + l + ".pkl", "rb"))
+            temp_df["label"] = [l] * len(temp_df)
             if i == 0:
                 df = temp_df
             else:
