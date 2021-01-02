@@ -15,9 +15,9 @@ def func(df_fine, df, p="business"):
     parent_df = df[df["label"].isin([p])].reset_index(drop=True)
 
     print("Stocks and Bonds")
-    reg_exp = "|".join(["economy", "energy companies", "international business"])
+    reg_exp = "|".join(["economy", "energy companies", "energy", "international business", "business"])
     child_df = parent_df[
-        parent_df.text.str.contains("stocks") & parent_df.text.str.contains("bonds") & ~parent_df.text.str.contains(
+        parent_df.text.str.contains("stocks|bonds") & ~parent_df.text.str.contains(
             reg_exp)].reset_index(drop=True)
     measure_quality(df_fine, child_df, "stocks_and_bonds")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "stocks_and_bonds" + ".pkl", "wb"))
