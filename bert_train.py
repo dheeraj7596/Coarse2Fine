@@ -483,12 +483,13 @@ if __name__ == "__main__":
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
 
     for ch in parent_to_child[p]:
-        for i in range(1, iteration + 1):
-            temp_child_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(i) + "it/" + ch + ".pkl", "rb"))
-            if i == 1:
-                child_df = temp_child_df
-            else:
-                child_df = pd.concat([child_df, temp_child_df])
+        child_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(iteration) + "it/" + ch + ".pkl", "rb"))
+        # for i in range(1, iteration + 1):
+        #     temp_child_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(i) + "it/" + ch + ".pkl", "rb"))
+        #     if i == 1:
+        #         child_df = temp_child_df
+        #     else:
+        #         child_df = pd.concat([child_df, temp_child_df])
         child_df["label"] = [ch] * len(child_df)
         df_train = pd.concat([df_train, child_df])
 
