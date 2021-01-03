@@ -220,7 +220,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                       )
     sample_every = 100
     warmup_steps = 1e2
-    epochs = 5
+    epochs = 3
     total_steps = len(train_dataloader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer,
                                                 num_warmup_steps=warmup_steps,
