@@ -16,7 +16,8 @@ if __name__ == "__main__":
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
 
-    base_fine_path = pkl_dump_dir + "gpt2/fine_ceonly/"
+    base_fine_path = pkl_dump_dir + "gpt2/fine/"
+    # base_fine_path = pkl_dump_dir + "gpt2/fine_ceonly/"
 
     coarse_tok_path = pkl_dump_dir + "gpt2/tokenizer_coarse"
     model_path = pkl_dump_dir + "gpt2/model/"
@@ -63,7 +64,7 @@ if __name__ == "__main__":
         for i, l in enumerate(list(children)):
             label_to_index[l] = i
             index_to_label[i] = l
-            temp_df = pickle.load(open(pkl_dump_dir + "exclusive_ceonly_" + str(iteration) + "it/" + l + ".pkl", "rb"))
+            temp_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(iteration) + "it/" + l + ".pkl", "rb"))
             temp_df["label"] = [l] * len(temp_df)
             if i == 0:
                 df = temp_df

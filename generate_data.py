@@ -92,6 +92,7 @@ if __name__ == "__main__":
     pkl_dump_dir = basepath + dataset
 
     base_fine_path = pkl_dump_dir + "gpt2/fine/"
+    # base_fine_path = pkl_dump_dir + "gpt2/fine_ceonly/"
 
     use_gpu = int(sys.argv[1])
     # use_gpu = False
@@ -129,3 +130,4 @@ if __name__ == "__main__":
 
         df = pd.DataFrame.from_dict({"text": all_sents, "label": all_labels})
         pickle.dump(df, open(pkl_dump_dir + "df_gen_" + p + ".pkl", "wb"))
+        # pickle.dump(df, open(pkl_dump_dir + "df_gen_ce_only_" + p + ".pkl", "wb"))

@@ -311,8 +311,6 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                          attention_mask=b_fine_input_mask,
                                          labels=b_fine_labels)
 
-                    b_fine_labels = b_fine_labels.to(secondary_device)
-
                     fine_log_probs = torch.log_softmax(outputs[1], dim=-1)
                     fine_label_sum_log_probs.append((fine_log_probs + fine_posterior_log_probs[l_ind]))
 
