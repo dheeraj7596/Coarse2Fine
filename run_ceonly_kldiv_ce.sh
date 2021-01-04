@@ -21,12 +21,12 @@ python3 generate_data.py 1 ${gpu} ${dataset} ${num}
 echo "Training BERT.."
 python3 bert_train.py 1 ${gpu} 2 ${dataset} 1
 echo "***********************************************************************"
-echo "ITERATION-3"
-echo "Running GPT2 CE-only iteration 3"
-python3 gpt2_fine_ceonly_ablation.py 1 ${gpu} 3 ${dataset}
-echo "Running GPT2 Fine-tune iteration 3"
-python3 gpt2_finetune_politics_prestart.py 1 ${gpu} ${gpu} ${dataset} 3
-echo "Generating Data.."
-python3 generate_data.py 1 ${gpu} ${dataset} ${num}
-echo "Training BERT.."
-python3 bert_train.py 1 ${gpu} 3 ${dataset} 1
+#echo "ITERATION-3"
+#echo "Running GPT2 CE-only iteration 3"
+#python3 gpt2_fine_ceonly_ablation.py 1 ${gpu} 3 ${dataset}
+#echo "Running GPT2 Fine-tune iteration 3"
+#python3 gpt2_finetune_politics_prestart.py 1 ${gpu} ${gpu} ${dataset} 3
+#echo "Generating Data.."
+#python3 generate_data.py 1 ${gpu} ${dataset} ${num}
+#echo "Training BERT.."
+#python3 bert_train.py 1 ${gpu} 3 ${dataset} 1
