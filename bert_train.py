@@ -412,7 +412,7 @@ def test(df_test_original, label_to_index, index_to_label):
     return true, preds, pred_probs
 
 
-def get_high_quality_inds(true, preds, pred_probs, label_to_index, threshold=0.7):
+def get_high_quality_inds(true, preds, pred_probs, label_to_index, threshold=0.7, percent_threshold=20):
     pred_inds = []
     for p in preds:
         pred_inds.append(label_to_index[p])
@@ -435,7 +435,7 @@ def get_high_quality_inds(true, preds, pred_probs, label_to_index, threshold=0.7
                 ct_thresh += 1
             label_to_probs[p].append(temp)
         min_ct = min(min_ct, ct_thresh)
-
+    min_ct = min(min_ct, int(percent_threshold / 100.0 * len(preds)))
     print("Collecting", min_ct, "samples as high quality")
     final_inds = {}
     for p in label_to_probs:
