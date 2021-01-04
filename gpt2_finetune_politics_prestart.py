@@ -337,7 +337,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   doc_start_ind,
                                   device,
                                   lambda_1=1,
-                                  lambda_2=0.7)
+                                  lambda_2=7e-3)
             # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
             print("Loss:", loss.item(), flush=True)
@@ -440,7 +440,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   device,
                                   is_val=True,
                                   lambda_1=1.0,
-                                  lambda_2=0.7)
+                                  lambda_2=7e-3)
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
