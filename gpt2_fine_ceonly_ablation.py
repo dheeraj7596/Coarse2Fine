@@ -64,7 +64,11 @@ if __name__ == "__main__":
         for i, l in enumerate(list(children)):
             label_to_index[l] = i
             index_to_label[i] = l
-            temp_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(iteration) + "it/" + l + ".pkl", "rb"))
+            if fine_dir_name == "fine":
+                temp_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(iteration) + "it/" + l + ".pkl", "rb"))
+            else:
+                temp_df = pickle.load(
+                    open(pkl_dump_dir + "exclusive_ceonly_" + str(iteration) + "it/" + l + ".pkl", "rb"))
             temp_df["label"] = [l] * len(temp_df)
             if i == 0:
                 df = temp_df
