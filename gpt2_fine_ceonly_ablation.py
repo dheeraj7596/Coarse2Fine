@@ -16,9 +16,6 @@ if __name__ == "__main__":
     dataset = "nyt/"
     pkl_dump_dir = basepath + dataset
 
-    base_fine_path = pkl_dump_dir + "gpt2/fine/"
-    # base_fine_path = pkl_dump_dir + "gpt2/fine_ceonly/"
-
     coarse_tok_path = pkl_dump_dir + "gpt2/tokenizer_coarse"
     model_path = pkl_dump_dir + "gpt2/model/"
     model_name = "coarse.pt"
@@ -28,6 +25,9 @@ if __name__ == "__main__":
     gpu_id = int(sys.argv[2])
     iteration = int(sys.argv[3])
     parent_label = sys.argv[4]
+    fine_dir_name = sys.argv[5]
+
+    base_fine_path = pkl_dump_dir + "gpt2/" + fine_dir_name + "/"
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
