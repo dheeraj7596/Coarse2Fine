@@ -215,7 +215,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
     # epsilon = 1e-20  # Defined to avoid log probability getting undefined.
     fine_posterior = torch.nn.Parameter(torch.ones(len(index_to_label)).to(device))
     optimizer = AdamW(list(fine_model.parameters()) + [fine_posterior],
-                      lr=5e-4,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
+                      lr=1e-5,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8.
                       )
     sample_every = 100
@@ -337,7 +337,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   doc_start_ind,
                                   device,
                                   lambda_1=1,
-                                  lambda_2=7e-3)
+                                  lambda_2=0.7)
             # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
             print("Loss:", loss.item(), flush=True)
@@ -440,7 +440,7 @@ def train(coarse_model, fine_model, coarse_tokenizer, fine_tokenizer, train_data
                                   device,
                                   is_val=True,
                                   lambda_1=1.0,
-                                  lambda_2=7e-3)
+                                  lambda_2=0.7)
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
