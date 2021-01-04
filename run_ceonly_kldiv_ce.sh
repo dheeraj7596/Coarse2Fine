@@ -7,7 +7,7 @@ python3 gpt2_fine_ceonly_ablation.py 1 ${gpu} 1 ${dataset} fine
 echo "Running GPT2 Fine-tune iteration 1"
 python3 gpt2_finetune_politics_prestart.py 1 ${gpu} ${gpu} ${dataset} 1
 echo "Generating Data.."
-python3 generate_data.py 1 ${gpu} ${dataset} ${num}
+python3 generate_data.py 1 ${gpu} ${dataset} ${num} fine
 echo "Training BERT.."
 python3 bert_train.py 1 ${gpu} 1 ${dataset} 1
 echo "***********************************************************************"
@@ -17,7 +17,7 @@ python3 gpt2_fine_ceonly_ablation.py 1 ${gpu} 2 ${dataset} fine
 echo "Running GPT2 Fine-tune iteration 2"
 python3 gpt2_finetune_politics_prestart.py 1 ${gpu} ${gpu} ${dataset} 2
 echo "Generating Data.."
-python3 generate_data.py 1 ${gpu} ${dataset} ${num}
+python3 generate_data.py 1 ${gpu} ${dataset} ${num} fine
 echo "Training BERT.."
 python3 bert_train.py 1 ${gpu} 2 ${dataset} 1
 echo "***********************************************************************"
@@ -27,6 +27,6 @@ python3 gpt2_fine_ceonly_ablation.py 1 ${gpu} 3 ${dataset} fine
 echo "Running GPT2 Fine-tune iteration 3"
 python3 gpt2_finetune_politics_prestart.py 1 ${gpu} ${gpu} ${dataset} 3
 echo "Generating Data.."
-python3 generate_data.py 1 ${gpu} ${dataset} ${num}
+python3 generate_data.py 1 ${gpu} ${dataset} ${num} fine
 echo "Training BERT.."
 python3 bert_train.py 1 ${gpu} 3 ${dataset} 1
