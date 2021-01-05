@@ -107,3 +107,4 @@ if __name__ == "__main__":
     print(df_coarse.label.value_counts())
     pickle.dump(df_fine, open(base_path + "df_fine.pkl", "wb"))
     pickle.dump(df_coarse, open(base_path + "df_coarse.pkl", "wb"))
+    pickle.dump(parent_to_child, open(base_path + "parent_to_child.pkl", "wb"))
