@@ -460,7 +460,7 @@ def get_high_quality_inds(true, preds, pred_probs, label_to_index, threshold=0.7
 if __name__ == "__main__":
     # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     basepath = "/data4/dheeraj/coarse2fine/"
-    dataset = "nyt/"
+    dataset = sys.argv[6] + "/"
     pkl_dump_dir = basepath + dataset
 
     use_gpu = int(sys.argv[1])
