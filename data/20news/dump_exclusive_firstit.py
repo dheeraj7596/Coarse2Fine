@@ -20,12 +20,14 @@ if __name__ == "__main__":
 
     exclusive_df_dir = pkl_dump_dir + "exclusive/"
     dest_exclusive_df_dir = pkl_dump_dir + "exclusive_1it/"
+    dest_exclusive_df_dir_2 = pkl_dump_dir + "exclusive_ceonly_1it/"
     os.makedirs(dest_exclusive_df_dir, exist_ok=True)
+    os.makedirs(dest_exclusive_df_dir_2, exist_ok=True)
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
     df_fine = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
 
-    num_dic = {"science": 112}
-    for p in ["science"]:
+    num_dic = {"recreation": 106, "computer": 22}
+    for p in ["recreation", "computer"]:
         for ch in parent_to_child[p]:
             print(ch)
             child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
@@ -33,3 +35,4 @@ if __name__ == "__main__":
                 child_df = child_df.sample(n=num_dic[p], random_state=42).reset_index(drop=True)
             measure_quality(df_fine, child_df, ch)
             pickle.dump(child_df, open(dest_exclusive_df_dir + ch + ".pkl", "wb"))
+            pickle.dump(child_df, open(dest_exclusive_df_dir_2 + ch + ".pkl", "wb"))
