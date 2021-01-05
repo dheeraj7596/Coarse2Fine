@@ -151,10 +151,13 @@ def train(fine_model, fine_tokenizer, train_dataloader, validation_dataloader, k
         ce_loss = calculate_ce_loss(lm_logits, b_labels, b_input_mask, cls_labels, index_to_label, doc_start_ind_dict,
                                     loss_fct)
         if is_val:
+            kl_loss = 0
+            print("KL-loss", kl_loss, "CE-loss", ce_loss.item())
             return ce_loss
         else:
             kl_loss = fwd_pass_kl_loss(fine_posterior, kl_dataloader, device, coarse_model, fine_model,
                                        coarse_tokenizer, fine_tokenizer, doc_start_ind)
+            print("KL-loss", kl_loss.item(), "CE-loss", ce_loss.item())
             return ce_loss + kl_loss
 
     fine_posterior = torch.nn.Parameter(torch.ones(len(index_to_label)).to(device))
