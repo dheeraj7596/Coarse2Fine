@@ -13,7 +13,7 @@ import pandas as pd
 if __name__ == "__main__":
     # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     basepath = "/data4/dheeraj/coarse2fine/"
-    dataset = "nyt/"
+    dataset = sys.argv[6] + "/"
     pkl_dump_dir = basepath + dataset
 
     coarse_tok_path = pkl_dump_dir + "gpt2/tokenizer_coarse"
