@@ -104,7 +104,7 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
             temp_tensor.append(fine_log_probs)
         temp_tensor = torch.cat(temp_tensor, dim=0)
         other_log_probs = torch.cat(other_log_probs, dim=0)
-        y_vec = torch.ones(length)
+        y_vec = torch.ones(length).to(device)
         loss = loss_fct(temp_tensor, other_log_probs, y_vec)
         return loss
 
