@@ -108,7 +108,8 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
         loss = loss_fct(temp_tensor, other_log_probs, y_vec)
         return loss
 
-    def calculate_loss(lm_logits, b_labels, b_input_mask, doc_start_ind, fine_log_probs, other_log_probs, is_fine=True):
+    def calculate_loss(lm_logits, b_labels, b_input_mask, doc_start_ind, fine_log_probs, other_log_probs,
+                       lambda_1=0.01, is_fine=True):
         ce_loss = calculate_ce_loss(lm_logits, b_labels, b_input_mask, doc_start_ind)
         if is_fine:
             hinge_loss = calculate_hinge_loss(fine_log_probs, other_log_probs)
@@ -116,7 +117,7 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
         else:
             hinge_loss = 0
             print("CE-loss", ce_loss.item(), "Hinge-loss", hinge_loss, flush=True)
-        return ce_loss + hinge_loss
+        return ce_loss + lambda_1 * hinge_loss
 
     optimizer = AdamW(model.parameters(),
                       lr=5e-4,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
