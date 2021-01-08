@@ -185,7 +185,7 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
                             attention_mask=b_input_mask,
                             labels=b_labels)
 
-            loss = calculate_loss(outputs[1], b_labels, b_input_mask, doc_start_ind, None, None, False)
+            loss = calculate_loss(outputs[1], b_labels, b_input_mask, doc_start_ind, None, None, is_fine=False)
             # loss = outputs[0]
             total_train_loss += loss.item()
 
@@ -254,7 +254,7 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
                     prev_mask = b_fine_input_mask
 
             loss = calculate_loss(orig_output[1], orig_labels, orig_mask, doc_start_ind, batch_fine_log_probs,
-                                  batch_other_log_probs, True)
+                                  batch_other_log_probs, is_fine=True)
             # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
             total_train_loss += loss.item()
             print("Loss:", loss.item(), flush=True)
@@ -304,7 +304,7 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
                                 labels=b_labels)
 
             # Accumulate the validation loss.
-            loss = calculate_loss(outputs[1], b_labels, b_input_mask, doc_start_ind, None, None, False)
+            loss = calculate_loss(outputs[1], b_labels, b_input_mask, doc_start_ind, None, None, is_fine=False)
             # loss = outputs[0]
             total_eval_loss += loss.item()
 
@@ -346,7 +346,7 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
                         prev_mask = b_fine_input_mask
 
             loss = calculate_loss(orig_output[1], orig_labels, orig_mask, doc_start_ind, batch_fine_log_probs,
-                                  batch_other_log_probs, True)
+                                  batch_other_log_probs, is_fine=True)
             total_eval_loss += loss.item()
 
         # Calculate the average loss over all of the batches.
