@@ -112,10 +112,10 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
         ce_loss = calculate_ce_loss(lm_logits, b_labels, b_input_mask, doc_start_ind)
         if is_fine:
             hinge_loss = calculate_hinge_loss(fine_log_probs, other_log_probs)
-            print("CE-loss", ce_loss.item(), "Hinge-loss", hinge_loss.item())
+            print("CE-loss", ce_loss.item(), "Hinge-loss", hinge_loss.item(), flush=True)
         else:
             hinge_loss = 0
-            print("CE-loss", ce_loss.item(), "Hinge-loss", hinge_loss)
+            print("CE-loss", ce_loss.item(), "Hinge-loss", hinge_loss, flush=True)
         return ce_loss + hinge_loss
 
     optimizer = AdamW(model.parameters(),
