@@ -207,7 +207,7 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
                     label_str = " ".join(lbl.split("_"))
                 text = tokenizer.bos_token + " " + label_str + " <|labelsep|> "
                 sample_outputs = model.generate(
-                    input_ids=model.encode(text, return_tensors='pt').to(device),
+                    input_ids=tokenizer.encode(text, return_tensors='pt').to(device),
                     do_sample=True,
                     top_k=50,
                     max_length=200,
