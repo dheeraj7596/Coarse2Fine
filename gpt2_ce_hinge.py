@@ -240,7 +240,7 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
                                     attention_mask=b_fine_input_mask,
                                     labels=b_fine_labels)
                     log_probs = torch.log_softmax(outputs[1], dim=-1)
-                    doc_prob = compute_doc_prob(log_probs, b_fine_input_mask, b_fine_labels, doc_start_ind)
+                    doc_prob = compute_doc_prob(log_probs, b_fine_input_mask, b_fine_labels, doc_start_ind).unsqueeze(0)
                     if mini_batch_ind == 0:
                         batch_fine_log_probs = doc_prob
                         orig_output = outputs
