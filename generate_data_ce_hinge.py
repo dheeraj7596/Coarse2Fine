@@ -96,9 +96,8 @@ if __name__ == "__main__":
     gpu_id = int(sys.argv[2])
     parent_label = sys.argv[3]
     num = int(sys.argv[4])
-    fine_dir_name = sys.argv[5]
 
-    base_fine_path = pkl_dump_dir + "gpt2/" + fine_dir_name + "/"
+    base_fine_path = pkl_dump_dir + "gpt2/coarse_fine/"
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
@@ -108,18 +107,18 @@ if __name__ == "__main__":
 
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
 
+    fine_label_path = base_fine_path
+    fine_tok_path = fine_label_path + "/tokenizer"
+    fine_model_path = fine_label_path + "/model/"
+
+    pad_token_dict = pickle.load(open(pkl_dump_dir + "/pad_token_dict.pkl", "rb"))
+
+    fine_tokenizer = GPT2Tokenizer.from_pretrained(fine_tok_path, do_lower_case=True)
+    fine_model = torch.load(fine_model_path + "coarse_fine.pt", map_location=device)
+
     all_sents = []
     all_labels = []
     for p in [parent_label]:
-        fine_label_path = base_fine_path + p
-        fine_tok_path = fine_label_path + "/tokenizer"
-        fine_model_path = fine_label_path + "/model/"
-
-        pad_token_dict = pickle.load(open(fine_label_path + "/pad_token_dict.pkl", "rb"))
-
-        fine_tokenizer = GPT2Tokenizer.from_pretrained(fine_tok_path, do_lower_case=True)
-        fine_model = torch.load(fine_model_path + p + ".pt", map_location=device)
-
         children = parent_to_child[p]
         for ch in children:
             sentences = generate(ch, fine_tokenizer, fine_model, pad_token_dict, num_samples=num)
@@ -129,7 +128,4 @@ if __name__ == "__main__":
             all_labels += labels
 
         df = pd.DataFrame.from_dict({"text": all_sents, "label": all_labels})
-        if fine_dir_name == "fine":
-            pickle.dump(df, open(pkl_dump_dir + "df_gen_" + p + ".pkl", "wb"))
-        else:
-            pickle.dump(df, open(pkl_dump_dir + "df_gen_ce_only_" + p + ".pkl", "wb"))
+        pickle.dump(df, open(pkl_dump_dir + "df_gen_" + p + ".pkl", "wb"))
