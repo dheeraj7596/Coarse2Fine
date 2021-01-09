@@ -73,7 +73,7 @@ def clean(df):
 
 
 def make_coarse_fine(df, child_to_parent):
-    df = df[~df.label.isin(["misc.forsale"])].reset_index(drop=True)
+    df = df[~df.label.isin(["misc.forsale", "talk.politics.misc", "talk.religion.misc"])].reset_index(drop=True)
     sents = []
     labs = []
     for i, row in df.iterrows():
@@ -93,8 +93,8 @@ if __name__ == "__main__":
                      "comp.windows.x"],
         "recreation": ["rec.autos", "rec.motorcycles", "rec.sport.baseball", "rec.sport.hockey"],
         "science": ["sci.crypt", "sci.electronics", "sci.med", "sci.space"],
-        "politics": ["talk.politics.misc", "talk.politics.guns", "talk.politics.mideast"],
-        "religion": ["talk.religion.misc", "alt.atheism", "soc.religion.christian"]
+        "politics": ["talk.politics.guns", "talk.politics.mideast"],
+        "religion": ["alt.atheism", "soc.religion.christian"]
     }
     child_to_parent = {}
     for p in parent_to_child:
