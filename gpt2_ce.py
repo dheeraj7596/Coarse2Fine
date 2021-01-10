@@ -2,7 +2,7 @@ import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel, get_linear_schedule_with_warmup, AdamW
 from gpt2_coarse_finetune import basic_gpt2_tokenize, create_data_loaders, test_generate, format_time
 from torch.utils.data import TensorDataset
-from torch.nn import CrossEntropyLoss, MarginRankingLoss
+from torch.nn import CrossEntropyLoss
 import os
 import pickle
 import sys
@@ -69,9 +69,8 @@ def compute_doc_prob(logits, b_fine_input_mask, b_fine_labels, doc_start_ind):
     return log_probs.sum()
 
 
-def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloader, fine_train_dataloader,
-          fine_validation_dataloader, doc_start_ind, parent_labels, child_labels, device):
-    def calculate_ce_loss(lm_logits, b_labels, b_input_mask, doc_start_ind):
+def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloader, doc_start_ind, all_labels, device):
+    def calculate_loss(lm_logits, b_labels, b_input_mask, doc_start_ind):
         loss_fct = CrossEntropyLoss()
         batch_size = lm_logits.shape[0]
         logits_collected = []
@@ -96,29 +95,6 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
         loss = loss_fct(logits_collected, labels_collected)
         return loss
 
-    def calculate_hinge_loss(fine_log_probs, other_log_probs):
-        loss_fct = MarginRankingLoss()
-        length = len(other_log_probs)
-        temp_tensor = []
-        for i in range(length):
-            temp_tensor.append(fine_log_probs)
-        temp_tensor = torch.cat(temp_tensor, dim=0)
-        other_log_probs = torch.cat(other_log_probs, dim=0)
-        y_vec = torch.ones(length).to(device)
-        loss = loss_fct(temp_tensor, other_log_probs, y_vec)
-        return loss
-
-    def calculate_loss(lm_logits, b_labels, b_input_mask, doc_start_ind, fine_log_probs, other_log_probs,
-                       lambda_1=0.01, is_fine=True):
-        ce_loss = calculate_ce_loss(lm_logits, b_labels, b_input_mask, doc_start_ind)
-        if is_fine:
-            hinge_loss = calculate_hinge_loss(fine_log_probs, other_log_probs)
-            print("CE-loss", ce_loss.item(), "Hinge-loss", hinge_loss.item(), flush=True)
-        else:
-            hinge_loss = 0
-            print("CE-loss", ce_loss.item(), "Hinge-loss", hinge_loss, flush=True)
-        return ce_loss + lambda_1 * hinge_loss
-
     optimizer = AdamW(model.parameters(),
                       lr=5e-4,  # args.learning_rate - default is 5e-5, our notebook had 2e-5
                       eps=1e-8  # args.adam_epsilon  - default is 1e-8.
@@ -127,7 +103,7 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
     sample_every = 100
     warmup_steps = 1e2
     epochs = 5
-    total_steps = (len(coarse_train_dataloader) + len(fine_train_dataloader)) * epochs
+    total_steps = len(coarse_train_dataloader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer,
                                                 num_warmup_steps=warmup_steps,
                                                 num_training_steps=total_steps)
@@ -155,7 +131,7 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
                     '  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(coarse_train_dataloader), elapsed),
                     flush=True)
                 model.eval()
-                lbl = random.choice(parent_labels)
+                lbl = random.choice(all_labels)
                 temp_list = ["<|labelpad|>"] * pad_token_dict[lbl]
                 if len(temp_list) > 0:
                     label_str = " ".join(lbl.split("_")) + " " + " ".join(temp_list)
@@ -185,79 +161,9 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
                             attention_mask=b_input_mask,
                             labels=b_labels)
 
-            loss = calculate_loss(outputs[1], b_labels, b_input_mask, doc_start_ind, None, None, is_fine=False)
+            loss = calculate_loss(outputs[1], b_labels, b_input_mask, doc_start_ind)
             # loss = outputs[0]
             total_train_loss += loss.item()
-
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
-
-        for step, batch in enumerate(fine_train_dataloader):
-            # batch contains -> fine_input_ids mini batch, fine_attention_masks mini batch
-            if step % sample_every == 0 and not step == 0:
-                elapsed = format_time(time.time() - t0)
-                print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(fine_train_dataloader), elapsed),
-                      flush=True)
-                model.eval()
-                lbl = random.choice(child_labels)
-                temp_list = ["<|labelpad|>"] * pad_token_dict[lbl]
-                if len(temp_list) > 0:
-                    label_str = " ".join(lbl.split("_")) + " " + " ".join(temp_list)
-                else:
-                    label_str = " ".join(lbl.split("_"))
-                text = tokenizer.bos_token + " " + label_str + " <|labelsep|> "
-                sample_outputs = model.generate(
-                    input_ids=tokenizer.encode(text, return_tensors='pt').to(device),
-                    do_sample=True,
-                    top_k=50,
-                    max_length=200,
-                    top_p=0.95,
-                    num_return_sequences=1
-                )
-                for i, sample_output in enumerate(sample_outputs):
-                    print("{}: {}".format(i, tokenizer.decode(sample_output)), flush=True)
-                model.train()
-
-            b_fine_input_ids_minibatch = batch[0].to(device)
-            b_fine_input_mask_minibatch = batch[1].to(device)
-
-            b_size = b_fine_input_ids_minibatch.shape[0]
-            assert b_size == 1
-            mini_batch_size = b_fine_input_ids_minibatch.shape[1]
-
-            model.zero_grad()
-
-            batch_other_log_probs = []
-            prev_mask = None
-
-            for b_ind in range(b_size):
-                for mini_batch_ind in range(mini_batch_size):
-                    b_fine_input_ids = b_fine_input_ids_minibatch[b_ind, mini_batch_ind, :].unsqueeze(0).to(device)
-                    b_fine_labels = b_fine_input_ids_minibatch[b_ind, mini_batch_ind, :].unsqueeze(0).to(device)
-                    b_fine_input_mask = b_fine_input_mask_minibatch[b_ind, mini_batch_ind, :].unsqueeze(0).to(device)
-                    outputs = model(b_fine_input_ids,
-                                    token_type_ids=None,
-                                    attention_mask=b_fine_input_mask,
-                                    labels=b_fine_labels)
-                    log_probs = torch.log_softmax(outputs[1], dim=-1)
-                    doc_prob = compute_doc_prob(log_probs, b_fine_input_mask, b_fine_labels, doc_start_ind).unsqueeze(0)
-                    if mini_batch_ind == 0:
-                        batch_fine_log_probs = doc_prob
-                        orig_output = outputs
-                        orig_labels = b_fine_labels
-                        orig_mask = b_fine_input_mask
-                    else:
-                        batch_other_log_probs.append(doc_prob)
-                    if prev_mask is not None:
-                        assert torch.all(b_fine_input_mask.eq(prev_mask))
-                    prev_mask = b_fine_input_mask
-
-            loss = calculate_loss(orig_output[1], orig_labels, orig_mask, doc_start_ind, batch_fine_log_probs,
-                                  batch_other_log_probs, is_fine=True)
-            # loss = criterion(batch_fine_probs.log(), batch_coarse_probs.detach()).sum(dim=-1).mean(dim=-1).mean(dim=-1)
-            total_train_loss += loss.item()
-            print("Loss:", loss.item(), flush=True)
 
             loss.backward()
             optimizer.step()
@@ -266,7 +172,7 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
         # **********************************
 
         # Calculate the average loss over all of the batches.
-        avg_train_loss = total_train_loss / (len(coarse_train_dataloader) + len(fine_train_dataloader))
+        avg_train_loss = total_train_loss / len(coarse_train_dataloader)
 
         # Measure how long this epoch took.
         training_time = format_time(time.time() - t0)
@@ -304,53 +210,12 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
                                 labels=b_labels)
 
             # Accumulate the validation loss.
-            loss = calculate_loss(outputs[1], b_labels, b_input_mask, doc_start_ind, None, None, is_fine=False)
+            loss = calculate_loss(outputs[1], b_labels, b_input_mask, doc_start_ind)
             # loss = outputs[0]
             total_eval_loss += loss.item()
 
-        for batch in fine_validation_dataloader:
-            # batch contains -> fine_input_ids mini batch, fine_attention_masks mini batch
-            b_fine_input_ids_minibatch = batch[0].to(device)
-            b_fine_input_mask_minibatch = batch[1].to(device)
-
-            b_size = b_fine_input_ids_minibatch.shape[0]
-            assert b_size == 1
-            mini_batch_size = b_fine_input_ids_minibatch.shape[1]
-
-            with torch.no_grad():
-                batch_other_log_probs = []
-                prev_mask = None
-
-                for b_ind in range(b_size):
-                    for mini_batch_ind in range(mini_batch_size):
-                        b_fine_input_ids = b_fine_input_ids_minibatch[b_ind, mini_batch_ind, :].unsqueeze(0).to(device)
-                        b_fine_labels = b_fine_input_ids_minibatch[b_ind, mini_batch_ind, :].unsqueeze(0).to(device)
-                        b_fine_input_mask = b_fine_input_mask_minibatch[b_ind, mini_batch_ind, :].unsqueeze(0).to(
-                            device)
-                        outputs = model(b_fine_input_ids,
-                                        token_type_ids=None,
-                                        attention_mask=b_fine_input_mask,
-                                        labels=b_fine_labels)
-                        log_probs = torch.log_softmax(outputs[1], dim=-1)
-                        doc_prob = compute_doc_prob(log_probs, b_fine_input_mask, b_fine_labels,
-                                                    doc_start_ind).unsqueeze(0)
-                        if mini_batch_ind == 0:
-                            batch_fine_log_probs = doc_prob
-                            orig_output = outputs
-                            orig_labels = b_fine_labels
-                            orig_mask = b_fine_input_mask
-                        else:
-                            batch_other_log_probs.append(doc_prob)
-                        if prev_mask is not None:
-                            assert torch.all(b_fine_input_mask.eq(prev_mask))
-                        prev_mask = b_fine_input_mask
-
-            loss = calculate_loss(orig_output[1], orig_labels, orig_mask, doc_start_ind, batch_fine_log_probs,
-                                  batch_other_log_probs, is_fine=True)
-            total_eval_loss += loss.item()
-
         # Calculate the average loss over all of the batches.
-        avg_val_loss = total_eval_loss / (len(coarse_validation_dataloader) + len(fine_validation_dataloader))
+        avg_val_loss = total_eval_loss / (len(coarse_validation_dataloader))
 
         # Measure how long the validation run took.
         validation_time = format_time(time.time() - t0)
@@ -419,11 +284,6 @@ if __name__ == "__main__":
     model.resize_token_embeddings(len(tokenizer))
     model.to(device)
 
-    child_to_parent = {}
-    for p in parent_to_child:
-        for ch in parent_to_child[p]:
-            child_to_parent[ch] = p
-
     parent_labels = []
     child_labels = []
     for p in parent_to_child:
@@ -455,6 +315,7 @@ if __name__ == "__main__":
             else:
                 df_weaksup = pd.concat([df_weaksup, temp_df])
 
+    df = pd.concat([df, df_weaksup])
     coarse_input_ids, coarse_attention_masks = basic_gpt2_tokenize(tokenizer, df.text.values, df.label.values,
                                                                    pad_token_dict)
     # Combine the training inputs into a TensorDataset.
@@ -463,24 +324,12 @@ if __name__ == "__main__":
     # Create a 90-10 train-validation split.
     coarse_train_dataloader, coarse_validation_dataloader = create_data_loaders(dataset, batch_size=4)
 
-    fine_input_ids, fine_attention_masks = gpt2_hinge_tokenize(tokenizer, df_weaksup.text.values,
-                                                               df_weaksup.label.values, pad_token_dict, child_to_parent)
-
-    # Combine the training inputs into a TensorDataset.
-    dataset = TensorDataset(fine_input_ids, fine_attention_masks)
-
-    # Create a 90-10 train-validation split.
-    fine_train_dataloader, fine_validation_dataloader = create_data_loaders(dataset, batch_size=1)
-
     model = train(model,
                   tokenizer,
                   coarse_train_dataloader,
                   coarse_validation_dataloader,
-                  fine_train_dataloader,
-                  fine_validation_dataloader,
                   doc_start_ind,
-                  parent_labels,
-                  child_labels,
+                  all_labels,
                   device)
     test_generate(model, tokenizer, all_labels, pad_token_dict, device)
 
