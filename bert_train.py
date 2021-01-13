@@ -469,6 +469,7 @@ if __name__ == "__main__":
     iteration = int(sys.argv[3])
     p = sys.argv[4]
     dump_flag = sys.argv[5]
+    algo = sys.argv[7]
 
     tok_path = pkl_dump_dir + "bert/" + p + "/tokenizer"
     model_path = pkl_dump_dir + "bert/" + p + "/model"
@@ -481,16 +482,18 @@ if __name__ == "__main__":
     else:
         num_dic = {"science": 112, "recreation": 69, "computer": 65, "religion": 110, "politics": 24}
 
-    df_train = pickle.load(open(pkl_dump_dir + "df_gen_" + p + ".pkl", "rb"))
+    df_train = pickle.load(open(pkl_dump_dir + algo + "/df_gen_" + p + ".pkl", "rb"))
     df_fine = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
     df_test = df_fine[df_fine["label"].isin(list(set(df_train.label.values)))].reset_index(drop=True)
 
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
 
     for ch in parent_to_child[p]:
-        child_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(iteration) + "it/" + ch + ".pkl", "rb"))
+        child_df = pickle.load(
+            open(pkl_dump_dir + "exclusive/" + algo + "/" + str(iteration) + "it/" + ch + ".pkl", "rb"))
         for i in range(1, iteration + 1):
-            temp_child_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(i) + "it/" + ch + ".pkl", "rb"))
+            temp_child_df = pickle.load(
+                open(pkl_dump_dir + "exclusive/" + algo + "/" + str(i) + "it/" + ch + ".pkl", "rb"))
             if i == 1:
                 child_df = temp_child_df
             else:
@@ -535,10 +538,10 @@ if __name__ == "__main__":
         for p in high_quality_inds:
             inds = high_quality_inds[p]
             temp_df = df_test.loc[inds].reset_index(drop=True)
-            os.makedirs(pkl_dump_dir + "exclusive_" + str(iteration + 1) + "it", exist_ok=True)
-            pickle.dump(temp_df,
-                        open(pkl_dump_dir + "exclusive_" + str(iteration + 1) + "it/" + index_to_label[p] + ".pkl",
-                             "wb"))
+            os.makedirs(pkl_dump_dir + "exclusive/" + algo + "/" + str(iteration + 1) + "it", exist_ok=True)
+            pickle.dump(temp_df, open(
+                pkl_dump_dir + "exclusive/" + algo + "/" + str(iteration + 1) + "it/" + index_to_label[p] + ".pkl",
+                "wb"))
 
     # tokenizer.save_pretrained(tok_path)
     # torch.save(model, model_path + "/model.pt")

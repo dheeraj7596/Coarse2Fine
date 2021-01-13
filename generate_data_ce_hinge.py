@@ -3,6 +3,7 @@ import sys
 import torch
 from transformers import GPT2Tokenizer
 import pandas as pd
+import os
 
 
 # def generate(l, tokenizer, model, pad_token_dict, num_samples=1000):
@@ -96,8 +97,11 @@ if __name__ == "__main__":
     gpu_id = int(sys.argv[2])
     parent_label = sys.argv[3]
     num = int(sys.argv[4])
+    algo = sys.argv[6]
 
-    base_fine_path = pkl_dump_dir + "gpt2/coarse_fine/"
+    os.makedirs(pkl_dump_dir + algo + "/", exist_ok=True)
+
+    base_fine_path = pkl_dump_dir + "gpt2/coarse_fine/" + algo + "/"
 
     # Tell pytorch to run this model on the GPU.
     if use_gpu:
@@ -128,4 +132,4 @@ if __name__ == "__main__":
             all_labels += labels
 
         df = pd.DataFrame.from_dict({"text": all_sents, "label": all_labels})
-        pickle.dump(df, open(pkl_dump_dir + "df_gen_" + p + ".pkl", "wb"))
+        pickle.dump(df, open(pkl_dump_dir + algo + "/df_gen_" + p + ".pkl", "wb"))

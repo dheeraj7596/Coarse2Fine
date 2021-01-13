@@ -255,8 +255,9 @@ if __name__ == "__main__":
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    tok_path = pkl_dump_dir + "gpt2/coarse_fine/tokenizer"
-    model_path = pkl_dump_dir + "gpt2/coarse_fine/model/"
+    algo = sys.argv[5]
+    tok_path = pkl_dump_dir + "gpt2/coarse_fine/" + algo + "/tokenizer"
+    model_path = pkl_dump_dir + "gpt2/coarse_fine/" + algo + "/model/"
     model_name = "coarse_fine.pt"
 
     os.makedirs(tok_path, exist_ok=True)
@@ -308,7 +309,7 @@ if __name__ == "__main__":
     df_weaksup = None
     for p in parent_to_child:
         for ch in parent_to_child[p]:
-            temp_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(iteration) + "it/" + ch + ".pkl", "rb"))
+            temp_df = pickle.load(open(pkl_dump_dir + "exclusive/" + algo + "/" + str(iteration) + "it/" + ch + ".pkl", "rb"))
             temp_df["label"] = [ch] * len(temp_df)
             if df_weaksup is None:
                 df_weaksup = temp_df
