@@ -15,30 +15,30 @@ def func(df_fine, df, p="recreation"):
     parent_df = df[df["label"].isin([p])].reset_index(drop=True)
 
     print("rec.autos")
-    reg_exp = "|".join(["motorcycles", "motorcycle", "baseball", "hockey"])
+    reg_exp = "|".join(["motorcycles", "baseball", "hockey"])
     child_df = parent_df[
-        parent_df.text.str.contains("autos|automobiles|automobile") & ~parent_df.text.str.contains(
+        parent_df.text.str.contains("autos") & ~parent_df.text.str.contains(
             reg_exp)].reset_index(drop=True)
     measure_quality(df_fine, child_df, "rec.autos")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "rec.autos" + ".pkl", "wb"))
 
     print("rec.motorcycles")
-    reg_exp = "|".join(["autos", "automobile", "automobiles", "baseball", "hockey"])
+    reg_exp = "|".join(["autos", "baseball", "hockey"])
     child_df = parent_df[
-        parent_df.text.str.contains("motorcycles|motorcycle") & ~parent_df.text.str.contains(reg_exp)].reset_index(
+        parent_df.text.str.contains("motorcycles") & ~parent_df.text.str.contains(reg_exp)].reset_index(
         drop=True)
     measure_quality(df_fine, child_df, "rec.motorcycles")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "rec.motorcycles" + ".pkl", "wb"))
 
     print("rec.sport.baseball")
-    reg_exp = "|".join(["autos", "automobile", "automobiles", "motorcycles", "motorcycle", "hockey"])
+    reg_exp = "|".join(["autos", "motorcycles", "hockey"])
     child_df = parent_df[parent_df.text.str.contains("baseball") & ~parent_df.text.str.contains(reg_exp)].reset_index(
         drop=True)
     measure_quality(df_fine, child_df, "rec.sport.baseball")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "rec.sport.baseball" + ".pkl", "wb"))
 
     print("rec.sport.hockey")
-    reg_exp = "|".join(["autos", "automobile", "automobiles", "motorcycles", "motorcycle", "baseball"])
+    reg_exp = "|".join(["autos", "motorcycles", "baseball"])
     child_df = parent_df[
         parent_df.text.str.contains("hockey") & ~parent_df.text.str.contains(
             reg_exp)].reset_index(drop=True)

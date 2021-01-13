@@ -15,7 +15,7 @@ def func(df_fine, df, p="politics"):
     parent_df = df[df["label"].isin([p])].reset_index(drop=True)
 
     print("talk.politics.guns")
-    reg_exp = "|".join(["mideast", "mid east", "middle east"])
+    reg_exp = "|".join(["mideast"])
     child_df = parent_df[
         parent_df.text.str.contains("guns") & ~parent_df.text.str.contains(
             reg_exp)].reset_index(drop=True)
@@ -25,7 +25,7 @@ def func(df_fine, df, p="politics"):
     print("talk.politics.mideast")
     reg_exp = "|".join(["guns"])
     child_df = parent_df[
-        parent_df.text.str.contains("mideast|mid east|middle east") & ~parent_df.text.str.contains(
+        parent_df.text.str.contains("mideast") & ~parent_df.text.str.contains(
             reg_exp)].reset_index(drop=True)
     measure_quality(df_fine, child_df, "talk.politics.mideast")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "talk.politics.mideast" + ".pkl", "wb"))

@@ -15,38 +15,37 @@ def func(df_fine, df, p="computer"):
     parent_df = df[df["label"].isin([p])].reset_index(drop=True)
 
     print("comp.graphics")
-    reg_exp = "|".join(["windows", "ibm", "mac", "window", "x window", "apple"])
+    reg_exp = "|".join(["windows", "ibm", "mac", "x window", "xterm"])
     child_df = parent_df[
-        parent_df.text.str.contains("graphics") & parent_df.text.str.contains("images") & ~parent_df.text.str.contains(
-            reg_exp)].reset_index(drop=True)
+        parent_df.text.str.contains("graphics") & ~parent_df.text.str.contains(reg_exp)].reset_index(drop=True)
     measure_quality(df_fine, child_df, "comp.graphics")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "comp.graphics" + ".pkl", "wb"))
 
     print("comp.os.ms-windows.misc")
-    reg_exp = "|".join(["graphics", "ibm", "mac", "x window", "apple", "hardware"])
-    child_df = parent_df[parent_df.text.str.contains("windows") & parent_df.text.str.contains("dos") & ~parent_df.text.str.contains(reg_exp)].reset_index(
+    reg_exp = "|".join(["graphics", "ibm", "mac", "x window", "xterm"])
+    child_df = parent_df[parent_df.text.str.contains("windows") & ~parent_df.text.str.contains(reg_exp)].reset_index(
         drop=True)
     measure_quality(df_fine, child_df, "comp.os.ms-windows.misc")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "comp.os.ms-windows.misc" + ".pkl", "wb"))
 
     print("comp.sys.ibm.pc.hardware")
-    reg_exp = "|".join(["graphics", "windows", "mac", "window", "x window", "apple", "images"])
-    child_df = parent_df[parent_df.text.str.contains("ibm") & parent_df.text.str.contains("drive") & ~parent_df.text.str.contains(reg_exp)].reset_index(
+    reg_exp = "|".join(["graphics", "windows", "mac", "x window", "xterm"])
+    child_df = parent_df[parent_df.text.str.contains("ibm") & ~parent_df.text.str.contains(reg_exp)].reset_index(
         drop=True)
     measure_quality(df_fine, child_df, "comp.sys.ibm.pc.hardware")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "comp.sys.ibm.pc.hardware" + ".pkl", "wb"))
 
     print("comp.sys.mac.hardware")
-    reg_exp = "|".join(["graphics", "windows", "ibm", "window", "x window"])
+    reg_exp = "|".join(["graphics", "windows", "ibm", "x window", "xterm"])
     child_df = parent_df[
-        parent_df.text.str.contains("mac") & parent_df.text.str.contains("apple") & ~parent_df.text.str.contains(
+        parent_df.text.str.contains("mac") & ~parent_df.text.str.contains(
             reg_exp)].reset_index(drop=True)
     measure_quality(df_fine, child_df, "comp.sys.mac.hardware")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "comp.sys.mac.hardware" + ".pkl", "wb"))
 
     print("comp.windows.x")
-    reg_exp = "|".join(["graphics", "ibm", "mac", "apple"])
-    child_df = parent_df[parent_df.text.str.contains("x window") & ~parent_df.text.str.contains(reg_exp)].reset_index(
+    reg_exp = "|".join(["graphics", "ibm", "mac", "windows"])
+    child_df = parent_df[parent_df.text.str.contains("x window|xterm") & ~parent_df.text.str.contains(reg_exp)].reset_index(
         drop=True)
     measure_quality(df_fine, child_df, "comp.windows.x")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "comp.windows.x" + ".pkl", "wb"))

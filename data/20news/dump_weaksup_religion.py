@@ -15,18 +15,16 @@ def func(df_fine, df, p="religion"):
     parent_df = df[df["label"].isin([p])].reset_index(drop=True)
 
     print("alt.atheism")
-    reg_exp = "|".join(["christian", "christ"])
+    reg_exp = "|".join(["christian"])
     child_df = parent_df[
-        parent_df.text.str.contains("atheism|atheists|atheist") & ~parent_df.text.str.contains(
-            reg_exp)].reset_index(drop=True)
+        parent_df.text.str.contains("atheism") & ~parent_df.text.str.contains(reg_exp)].reset_index(drop=True)
     measure_quality(df_fine, child_df, "alt.atheism")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "alt.atheism" + ".pkl", "wb"))
 
     print("soc.religion.christian")
-    reg_exp = "|".join(["atheism", "atheists", "atheist"])
+    reg_exp = "|".join(["atheism"])
     child_df = parent_df[
-        parent_df.text.str.contains("christian") & parent_df.text.str.contains("christ") & parent_df.text.str.contains(
-            "jesus") & ~parent_df.text.str.contains(reg_exp)].reset_index(drop=True)
+        parent_df.text.str.contains("christian") & ~parent_df.text.str.contains(reg_exp)].reset_index(drop=True)
     measure_quality(df_fine, child_df, "soc.religion.christian")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "soc.religion.christian" + ".pkl", "wb"))
 
