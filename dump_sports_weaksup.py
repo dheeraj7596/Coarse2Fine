@@ -15,54 +15,54 @@ def func(df_fine, df, p="sports"):
     parent_df = df[df["label"].isin([p])].reset_index(drop=True)
 
     print("Tennis")
-    reg_exp = "|".join(["golf", "soccer", "basketball", "hockey", "baseball", "football", "american football"])
+    reg_exp = "|".join(["golf", "soccer", "basketball", "hockey", "baseball", "football"])
     child_df = parent_df[parent_df.text.str.contains("tennis") & ~parent_df.text.str.contains(reg_exp)].reset_index(
         drop=True)
     measure_quality(df_fine, child_df, "tennis")
-    # pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "tennis" + ".pkl", "wb"))
+    pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "tennis" + ".pkl", "wb"))
 
     print("Golf")
     reg_exp = "|".join(
-        ["tennis", "soccer", "basketball", "hockey", "baseball", "football", "american football"])
+        ["tennis", "soccer", "basketball", "hockey", "baseball", "football"])
     child_df = parent_df[parent_df.text.str.contains("golf") & ~parent_df.text.str.contains(reg_exp)].reset_index(
         drop=True)
     measure_quality(df_fine, child_df, "golf")
-    # pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "golf" + ".pkl", "wb"))
+    pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "golf" + ".pkl", "wb"))
 
     print("Soccer")
-    reg_exp = "|".join(["tennis", "golf", "basketball", "hockey", "baseball", "football", "american football"])
+    reg_exp = "|".join(["tennis", "golf", "basketball", "hockey", "baseball", "football"])
     child_df = parent_df[
         parent_df.text.str.contains("soccer") & ~parent_df.text.str.contains(reg_exp)].reset_index(drop=True)
     measure_quality(df_fine, child_df, "soccer")
-    # pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "soccer" + ".pkl", "wb"))
+    pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "soccer" + ".pkl", "wb"))
 
     print("Basketball")
-    reg_exp = "|".join(["tennis", "golf", "soccer", "hockey", "baseball", "football", "american football"])
+    reg_exp = "|".join(["tennis", "golf", "soccer", "hockey", "baseball", "football"])
     child_df = parent_df[
         parent_df.text.str.contains("basketball") & ~parent_df.text.str.contains(reg_exp)].reset_index(drop=True)
     measure_quality(df_fine, child_df, "basketball")
-    # pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "basketball" + ".pkl", "wb"))
+    pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "basketball" + ".pkl", "wb"))
 
     print("Hockey")
-    reg_exp = "|".join(["tennis", "golf", "soccer", "basketball", "baseball", "football", "american football"])
+    reg_exp = "|".join(["tennis", "golf", "soccer", "basketball", "baseball", "football"])
     child_df = parent_df[
         parent_df.text.str.contains("hockey") & ~parent_df.text.str.contains(reg_exp)].reset_index(drop=True)
     measure_quality(df_fine, child_df, "hockey")
-    # pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "hockey" + ".pkl", "wb"))
+    pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "hockey" + ".pkl", "wb"))
 
     print("Baseball")
-    reg_exp = "|".join(["tennis", "golf", "soccer", "basketball", "hockey", "football", "american football"])
+    reg_exp = "|".join(["tennis", "golf", "soccer", "basketball", "hockey", "football"])
     child_df = parent_df[
         parent_df.text.str.contains("baseball") & ~parent_df.text.str.contains(reg_exp)].reset_index(drop=True)
     measure_quality(df_fine, child_df, "baseball")
-    # pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "baseball" + ".pkl", "wb"))
+    pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "baseball" + ".pkl", "wb"))
 
     print("Football")
     reg_exp = "|".join(["tennis", "golf", "soccer", "basketball", "hockey", "baseball"])
     child_df = parent_df[
-        parent_df.text.str.contains("american football") & ~parent_df.text.str.contains(reg_exp)].reset_index(drop=True)
+        parent_df.text.str.contains("football") & ~parent_df.text.str.contains(reg_exp)].reset_index(drop=True)
     measure_quality(df_fine, child_df, "football")
-    # pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "football" + ".pkl", "wb"))
+    pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "football" + ".pkl", "wb"))
 
 
 if __name__ == "__main__":
