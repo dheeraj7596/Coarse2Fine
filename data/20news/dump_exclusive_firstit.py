@@ -26,8 +26,8 @@ if __name__ == "__main__":
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
     df_fine = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
 
-    num_dic = {"science": 112, "recreation": 106, "computer": 22, "religion": 180, "politics": 90}
-    for p in parent_to_child:
+    num_dic = {"science": 112, "recreation": 69, "computer": 65, "religion": 110, "politics": 24}
+    for p in num_dic:
         for ch in parent_to_child[p]:
             print(ch)
             child_df = pickle.load(open(exclusive_df_dir + ch + ".pkl", "rb"))
