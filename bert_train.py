@@ -412,7 +412,7 @@ def test(df_test_original, label_to_index, index_to_label):
     return true, preds, pred_probs
 
 
-def get_high_quality_inds(true, preds, pred_probs, label_to_index, threshold=0.7, percent_threshold=20):
+def get_high_quality_inds(true, preds, pred_probs, label_to_index, num, threshold=0.7, percent_threshold=20):
     pred_inds = []
     for p in preds:
         pred_inds.append(label_to_index[p])
@@ -435,7 +435,8 @@ def get_high_quality_inds(true, preds, pred_probs, label_to_index, threshold=0.7
                 ct_thresh += 1
             label_to_probs[p].append(temp)
         min_ct = min(min_ct, ct_thresh)
-    min_ct = min(min_ct, int((percent_threshold / (len(label_to_index) * 100.0)) * len(preds)))
+    # min_ct = min(min_ct, int((percent_threshold / (len(label_to_index) * 100.0)) * len(preds)))
+    min_ct = num
     print("Collecting", min_ct, "samples as high quality")
     final_inds = {}
     for p in label_to_probs:
@@ -475,6 +476,10 @@ if __name__ == "__main__":
     os.makedirs(model_path, exist_ok=True)
 
     # use_gpu = False
+    if sys.argv[6] == "nyt":
+        num_dic = {"arts": 46, "science": 21, "politics": 24, "sports": 270, "business": 33}
+    else:
+        num_dic = {"science": 112, "recreation": 69, "computer": 65, "religion": 110, "politics": 24}
 
     df_train = pickle.load(open(pkl_dump_dir + "df_gen_" + p + ".pkl", "rb"))
     df_fine = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
@@ -484,12 +489,12 @@ if __name__ == "__main__":
 
     for ch in parent_to_child[p]:
         child_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(iteration) + "it/" + ch + ".pkl", "rb"))
-        # for i in range(1, iteration + 1):
-        #     temp_child_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(i) + "it/" + ch + ".pkl", "rb"))
-        #     if i == 1:
-        #         child_df = temp_child_df
-        #     else:
-        #         child_df = pd.concat([child_df, temp_child_df])
+        for i in range(1, iteration + 1):
+            temp_child_df = pickle.load(open(pkl_dump_dir + "exclusive_" + str(i) + "it/" + ch + ".pkl", "rb"))
+            if i == 1:
+                child_df = temp_child_df
+            else:
+                child_df = pd.concat([child_df, temp_child_df])
         child_df["label"] = [ch] * len(child_df)
         df_train = pd.concat([df_train, child_df])
 
@@ -523,7 +528,8 @@ if __name__ == "__main__":
 
     model = train(train_dataloader, validation_dataloader, device, num_labels=len(label_to_index))
     true, preds, pred_probs = test(df_test, label_to_index, index_to_label)
-    high_quality_inds = get_high_quality_inds(true, preds, pred_probs, label_to_index, percent_threshold=20 * iteration)
+    high_quality_inds = get_high_quality_inds(true, preds, pred_probs, label_to_index, num_dic[p],
+                                              percent_threshold=20 * iteration)
 
     if dump_flag:
         for p in high_quality_inds:
@@ -534,5 +540,5 @@ if __name__ == "__main__":
                         open(pkl_dump_dir + "exclusive_" + str(iteration + 1) + "it/" + index_to_label[p] + ".pkl",
                              "wb"))
 
-    tokenizer.save_pretrained(tok_path)
-    torch.save(model, model_path + "/model.pt")
+    # tokenizer.save_pretrained(tok_path)
+    # torch.save(model, model_path + "/model.pt")
