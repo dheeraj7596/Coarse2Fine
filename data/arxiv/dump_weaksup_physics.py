@@ -40,9 +40,18 @@ def func(df_fine, df, p="physics"):
     print("physics.ins-det")
     reg_exp = "|".join(list(all_words - {"instrumentation", "detectors"}))
     child_df = parent_df[
-        parent_df.text.str.contains("instrumentation|detectors") & ~parent_df.text.str.contains(reg_exp)].reset_index(drop=True)
+        parent_df.text.str.contains("instrumentation|detectors") & ~parent_df.text.str.contains(reg_exp)].reset_index(
+        drop=True)
     measure_quality(df_fine, child_df, "physics.ins-det")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "physics.ins-det" + ".pkl", "wb"))
+
+    print("physics.acc-ph")
+    reg_exp = "|".join(list(all_words - {"accelerator"}))
+    child_df = parent_df[
+        parent_df.text.str.contains("accelerator") & ~parent_df.text.str.contains(reg_exp)].reset_index(
+        drop=True)
+    measure_quality(df_fine, child_df, "physics.acc-ph")
+    pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "physics.acc-ph" + ".pkl", "wb"))
 
     print("physics.plasm-ph")
     reg_exp = "|".join(list(all_words - {"plasma"}))
@@ -67,6 +76,7 @@ def func(df_fine, df, p="physics"):
         drop=True)
     measure_quality(df_fine, child_df, "physics.soc-ph")
     pickle.dump(child_df, open(pkl_dump_dir + "exclusive/" + "physics.soc-ph" + ".pkl", "wb"))
+
 
 if __name__ == "__main__":
     basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"

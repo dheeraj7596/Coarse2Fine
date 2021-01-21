@@ -28,6 +28,10 @@ if __name__ == "__main__":
     length = len(data_lines)
 
     parent_to_child = create_parent_to_child(base_path)
+    parent_to_child["cs"].remove("cs.OH")
+    parent_to_child["physics"].remove("physics.gen-ph")
+    parent_to_child["physics"].remove("physics.class-ph")
+    parent_to_child["math"].remove("math.GM")
     child_to_parent = {}
     for p in parent_to_child:
         for ch in parent_to_child[p]:
@@ -38,8 +42,10 @@ if __name__ == "__main__":
     fine_labels = []
 
     for i in range(length):
-        sent = data_lines[i].strip()
+        sent = data_lines[i].lower().strip()
         fine_lbl = label_lines[i].strip()
+        if fine_lbl in ["cs.OH", "physics.gen-ph", "physics.class-ph", "math.GM"]:
+            continue
         coarse_lbl = child_to_parent[fine_lbl]
         sents.append(sent)
         coarse_labels.append(coarse_lbl)
@@ -47,6 +53,10 @@ if __name__ == "__main__":
 
     df_coarse = pd.DataFrame.from_dict({"text": sents, "label": coarse_labels})
     df_fine = pd.DataFrame.from_dict({"text": sents, "label": fine_labels})
-    pickle.dump(df_coarse, open(base_path + "df_coarse.pkl", "wb"))
-    pickle.dump(df_fine, open(base_path + "df_fine.pkl", "wb"))
-    pickle.dump(parent_to_child, open(base_path + "parent_to_child.pkl", "wb"))
+    print(df_coarse.label.value_counts())
+    print(df_fine.label.value_counts())
+    for p in parent_to_child:
+        print(p, len(parent_to_child[p]))
+    # pickle.dump(df_coarse, open(base_path + "df_coarse.pkl", "wb"))
+    # pickle.dump(df_fine, open(base_path + "df_fine.pkl", "wb"))
+    # pickle.dump(parent_to_child, open(base_path + "parent_to_child.pkl", "wb"))
