@@ -479,8 +479,12 @@ if __name__ == "__main__":
     # use_gpu = False
     if sys.argv[6] == "nyt":
         num_dic = {"arts": 46, "science": 21, "politics": 24, "sports": 270, "business": 33}
-    else:
+    elif sys.argv[6] == "20news":
         num_dic = {"science": 112, "recreation": 69, "computer": 65, "religion": 110, "politics": 24}
+    elif sys.argv[6] == "arxiv":
+        num_dic = {"cs": 56, "math": 43, "physics": 74}
+    else:
+        raise Exception("Unknown label detected")
 
     df_train = pickle.load(open(pkl_dump_dir + algo + "/df_gen_" + p + ".pkl", "rb"))
     df_fine = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
