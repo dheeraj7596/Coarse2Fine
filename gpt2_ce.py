@@ -107,7 +107,7 @@ def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloade
     scheduler = get_linear_schedule_with_warmup(optimizer,
                                                 num_warmup_steps=warmup_steps,
                                                 num_training_steps=total_steps)
-    seed_val = 42
+    seed_val = 37
     random.seed(seed_val)
     np.random.seed(seed_val)
     torch.manual_seed(seed_val)
@@ -247,7 +247,7 @@ if __name__ == "__main__":
     dataset = sys.argv[4] + "/"
     pkl_dump_dir = basepath + dataset
 
-    seed_val = 23
+    seed_val = 37
     random.seed(seed_val)
     np.random.seed(seed_val)
     torch.manual_seed(seed_val)
