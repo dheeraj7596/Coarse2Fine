@@ -138,7 +138,7 @@ def train(train_dataloader, validation_dataloader, device, num_labels):
     # https://github.com/huggingface/transformers/blob/5bfcd0485ece086ebcbed2d008813037968a9e58/examples/run_glue.py#L128
 
     # Set the seed value all over the place to make this reproducible.
-    seed_val = 81
+    seed_val = 42
 
     random.seed(seed_val)
     np.random.seed(seed_val)
