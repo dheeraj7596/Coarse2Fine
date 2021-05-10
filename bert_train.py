@@ -460,7 +460,7 @@ def get_high_quality_inds(true, preds, pred_probs, label_to_index, num, threshol
 
 if __name__ == "__main__":
     # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
-    basepath = "/data4/dheeraj/coarse2fine/"
+    basepath = "/data/dheeraj/coarse2fine/"
     dataset = sys.argv[6] + "/"
     pkl_dump_dir = basepath + dataset
 
