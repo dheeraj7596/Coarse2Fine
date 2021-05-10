@@ -1,0 +1,20 @@
+{
+  "comp.graphics": ["graphics"],
+  "comp.os.ms-windows.misc": ["windows"],
+  "comp.sys.ibm.pc.hardware": ["ibm"],
+  "comp.sys.mac.hardware": ["mac"],
+  "comp.windows.x": ["xterm"],
+  "talk.politics.guns": ["guns"],
+  "talk.politics.mideast": ["mideast"],
+  "rec.autos": ["autos"],
+  "rec.motorcycles": ["motorcycles"],
+  "rec.sport.baseball": ["baseball"],
+  "rec.sport.hockey": ["hockey"],
+  "alt.atheism": ["atheism"],
+  "soc.religion.christian": ["christian"],
+  "sci.crypt": ["encryption"],
+  "sci.electronics": ["electronics"],
+  "sci.med": ["medicine"],
+  "sci.space": ["space"]
+}
+
