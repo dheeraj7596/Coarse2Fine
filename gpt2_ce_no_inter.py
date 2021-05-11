@@ -90,7 +90,8 @@ if __name__ == "__main__":
                   coarse_validation_dataloader,
                   doc_start_ind,
                   all_labels,
-                  device)
+                  device,
+                  pad_token_dict)
     test_generate(model, tokenizer, all_labels, pad_token_dict, device)
 
     tokenizer.save_pretrained(tok_path)

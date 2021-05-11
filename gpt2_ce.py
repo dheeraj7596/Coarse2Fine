@@ -69,7 +69,8 @@ def compute_doc_prob(logits, b_fine_input_mask, b_fine_labels, doc_start_ind):
     return log_probs.sum()
 
 
-def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloader, doc_start_ind, all_labels, device):
+def train(model, tokenizer, coarse_train_dataloader, coarse_validation_dataloader, doc_start_ind, all_labels, device,
+          pad_token_dict):
     def calculate_loss(lm_logits, b_labels, b_input_mask, doc_start_ind):
         loss_fct = CrossEntropyLoss()
         batch_size = lm_logits.shape[0]
@@ -309,7 +310,8 @@ if __name__ == "__main__":
     df_weaksup = None
     for p in parent_to_child:
         for ch in parent_to_child[p]:
-            temp_df = pickle.load(open(pkl_dump_dir + "exclusive/" + algo + "/" + str(iteration) + "it/" + ch + ".pkl", "rb"))
+            temp_df = pickle.load(
+                open(pkl_dump_dir + "exclusive/" + algo + "/" + str(iteration) + "it/" + ch + ".pkl", "rb"))
             temp_df["label"] = [ch] * len(temp_df)
             if df_weaksup is None:
                 df_weaksup = temp_df
@@ -331,7 +333,8 @@ if __name__ == "__main__":
                   coarse_validation_dataloader,
                   doc_start_ind,
                   all_labels,
-                  device)
+                  device,
+                  pad_token_dict)
     test_generate(model, tokenizer, all_labels, pad_token_dict, device)
 
     tokenizer.save_pretrained(tok_path)
