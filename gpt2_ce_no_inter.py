@@ -1,6 +1,5 @@
 from gpt2_ce import *
 
-
 if __name__ == "__main__":
     # basepath = "/Users/dheerajmekala/Work/Coarse2Fine/data/"
     basepath = "/data/dheeraj/coarse2fine/"
@@ -66,7 +65,7 @@ if __name__ == "__main__":
     # tokenizer.convert_ids_to_tokens(tokenizer.convert_tokens_to_ids(tokenizer.tokenize("<|startoftext|> sports <|labelsep|> Hello, my dog is cute <|endoftext|>")))
 
     df_weaksup = None
-    for p in parent_to_child:
+    for p in [parent_label]:
         for ch in parent_to_child[p]:
             temp_df = pickle.load(
                 open(pkl_dump_dir + "exclusive/" + algo + "/" + str(iteration) + "it/" + ch + ".pkl", "rb"))
