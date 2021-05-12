@@ -382,7 +382,7 @@ if __name__ == "__main__":
     dataset = sys.argv[4] + "/"
     pkl_dump_dir = basepath + dataset
 
-    seed_val = 81
+    seed_val = 42
     random.seed(seed_val)
     np.random.seed(seed_val)
     torch.manual_seed(seed_val)
