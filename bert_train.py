@@ -552,5 +552,5 @@ if __name__ == "__main__":
 
     # tokenizer.save_pretrained(tok_path)
     # torch.save(model, model_path + "/model.pt")
-    pickle.dump(pred_probs, open(model_path + "/pred_probs.pkl", "wb"))
-    pickle.dump(preds, open(model_path + "/preds.pkl", "wb"))
+    pickle.dump(pred_probs, open(model_path + "/" + p + "_probs.pkl", "wb"))
+    pickle.dump(preds, open(model_path + "/" + p + ".pkl", "wb"))
