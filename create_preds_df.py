@@ -3,7 +3,8 @@ import pandas as pd
 from sklearn.metrics import f1_score
 
 if __name__ == "__main__":
-    data_path = "./data/20news/"
+    dataset = "nyt"
+    data_path = "./data/" + dataset + "/"
     pred1_path = data_path + "pred1/"
     pred2_path = data_path + "pred2/"
 
@@ -15,8 +16,8 @@ if __name__ == "__main__":
     true = []
 
     for p in parent_to_child:
-        df_train = pickle.load(open(data_path + "df_gen_" + p + ".pkl", "rb"))
-        df_test = df_fine[df_fine["label"].isin(list(set(df_train.label.values)))].reset_index(drop=True)
+        # df_train = pickle.load(open(data_path + "df_gen_" + p + ".pkl", "rb"))
+        df_test = df_fine[df_fine["label"].isin(parent_to_child[p])].reset_index(drop=True)
         pred1 = pickle.load(open(pred1_path + p + ".pkl", "rb"))
         pred2 = pickle.load(open(pred2_path + p + ".pkl", "rb"))
         clf1 += pred1

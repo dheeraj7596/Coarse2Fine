@@ -3,7 +3,8 @@ import numpy as np
 from sklearn.metrics import f1_score
 
 if __name__ == "__main__":
-    data_path = "./data/20news/"
+    dataset = "nyt"
+    data_path = "./data/" + dataset + "/"
     probs_df = pickle.load(open(data_path + "probs_df.pkl", "rb"))
 
     perf1 = []
