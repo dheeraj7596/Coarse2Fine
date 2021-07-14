@@ -1,7 +1,7 @@
 gpu=$1
-echo "ITERATION-1"
-echo "Running GPT CE-Hinge iteration 1"
-python3 gpt_ce_hinge.py 1 ${gpu} 1 20news ce_hinge
+#echo "ITERATION-1"
+#echo "Running GPT CE-Hinge iteration 1"
+#python3 gpt_ce_hinge.py 1 ${gpu} 1 20news ce_hinge
 echo "Generating Computer Data.."
 python3 generate_data_ce_hinge_gpt.py 1 ${gpu} computer 2000 20news ce_hinge
 echo "Training Computer BERT.."
