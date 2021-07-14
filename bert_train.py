@@ -490,6 +490,7 @@ if __name__ == "__main__":
         raise Exception("Unknown label detected")
 
     df_train = pickle.load(open(pkl_dump_dir + algo + "/df_gen_" + p + ".pkl", "rb"))
+    print(df_train["text"][0], df_train["label"][0], flush=True)
     df_fine = pickle.load(open(pkl_dump_dir + "df_fine.pkl", "rb"))
     df_test = df_fine[df_fine["label"].isin(list(set(df_train.label.values)))].reset_index(drop=True)
 
