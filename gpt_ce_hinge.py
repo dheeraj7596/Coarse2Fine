@@ -458,7 +458,7 @@ if __name__ == "__main__":
                 df_weaksup = pd.concat([df_weaksup, temp_df])
 
     coarse_input_ids, coarse_attention_masks = basic_gpt2_tokenize(tokenizer, df.text.values, df.label.values,
-                                                                   pad_token_dict)
+                                                                   pad_token_dict, max_length=512)
     # Combine the training inputs into a TensorDataset.
     dataset = TensorDataset(coarse_input_ids, coarse_attention_masks)
 
@@ -466,7 +466,8 @@ if __name__ == "__main__":
     coarse_train_dataloader, coarse_validation_dataloader = create_data_loaders(dataset, batch_size=4)
 
     fine_input_ids, fine_attention_masks = gpt2_hinge_tokenize(tokenizer, df_weaksup.text.values,
-                                                               df_weaksup.label.values, pad_token_dict, child_to_parent)
+                                                               df_weaksup.label.values, pad_token_dict, child_to_parent,
+                                                               max_length=512)
 
     # Combine the training inputs into a TensorDataset.
     dataset = TensorDataset(fine_input_ids, fine_attention_masks)
