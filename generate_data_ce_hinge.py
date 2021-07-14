@@ -41,7 +41,7 @@ def generate(l, tokenizer, model, pad_token_dict, num_samples=1000):
     ids = torch.tensor([[tokenizer.bos_token_id] + encoded_dict['input_ids'].data.tolist()[0]]).to(device)
 
     sents = []
-    its = num_samples / 500
+    its = num_samples / 250
     if its < 1:
         sample_outputs = model.generate(
             input_ids=ids,
@@ -62,7 +62,7 @@ def generate(l, tokenizer, model, pad_token_dict, num_samples=1000):
                 top_k=50,
                 max_length=200,
                 top_p=0.95,
-                num_return_sequences=500
+                num_return_sequences=250
             )
             for i, sample_output in enumerate(sample_outputs):
                 # print("{}: {}".format(i, tokenizer.decode(sample_output)))
