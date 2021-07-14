@@ -10,12 +10,12 @@ echo "Generating Politics Data.."
 python3 generate_data_ce_hinge.py 1 ${gpu} politics 250 nyt ce_hinge
 echo "Training Politics BERT.."
 python3 bert_train.py 1 ${gpu} 1 politics 1 nyt ce_hinge
-echo "Generating Science Data.."
-python3 generate_data_ce_hinge.py 1 ${gpu} science 90 nyt ce_hinge
+#echo "Generating Science Data.."
+#python3 generate_data_ce_hinge.py 1 ${gpu} science 90 nyt ce_hinge
 echo "Training Science BERT.."
 python3 bert_train.py 1 ${gpu} 1 science 1 nyt ce_hinge
-echo "Generating Business Data.."
-python3 generate_data_ce_hinge.py 1 ${gpu} business 500 nyt ce_hinge
+#echo "Generating Business Data.."
+#python3 generate_data_ce_hinge.py 1 ${gpu} business 500 nyt ce_hinge
 echo "Training Business BERT.."
 python3 bert_train.py 1 ${gpu} 1 business 1 nyt ce_hinge
 echo "Generating Sports Data.."
