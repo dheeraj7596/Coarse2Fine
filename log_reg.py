@@ -125,6 +125,7 @@ if __name__ == "__main__":
     pred_probs = clf.predict_proba(X_test)
 
     y_test = [index_to_label[l] for l in y_test]
+    print(classification_report(y_test, preds), flush=True)
     high_quality_inds = get_high_quality_inds(y_test, preds, pred_probs, label_to_index, num_dic[p], threshold=0.7)
 
     if dump_flag:
