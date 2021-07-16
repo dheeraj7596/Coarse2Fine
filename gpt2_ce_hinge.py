@@ -413,10 +413,10 @@ if __name__ == "__main__":
     df = pickle.load(open(pkl_dump_dir + "df_coarse.pkl", "rb"))
     parent_to_child = pickle.load(open(pkl_dump_dir + "parent_to_child.pkl", "rb"))
 
-    tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token='<|startoftext|>', pad_token='<|pad|>',
+    tokenizer = GPT2Tokenizer.from_pretrained('gpt2-medium', bos_token='<|startoftext|>', pad_token='<|pad|>',
                                               additional_special_tokens=['<|labelsep|>', '<|labelpad|>'])
 
-    model = GPT2LMHeadModel.from_pretrained('gpt2')
+    model = GPT2LMHeadModel.from_pretrained('gpt2-medium')
     model.resize_token_embeddings(len(tokenizer))
     model.to(device)
 
