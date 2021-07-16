@@ -73,11 +73,11 @@ if __name__ == "__main__":
     # algo = "ce_hinge"
 
     # use_gpu = False
-    if sys.argv[6] == "nyt":
+    if sys.argv[4] == "nyt":
         num_dic = {"arts": 46, "science": 21, "politics": 24, "sports": 270, "business": 33}
-    elif sys.argv[6] == "20news":
+    elif sys.argv[4] == "20news":
         num_dic = {"science": 112, "recreation": 69, "computer": 65, "religion": 110, "politics": 24}
-    elif sys.argv[6] == "arxiv":
+    elif sys.argv[4] == "arxiv":
         num_dic = {"cs": 56, "math": 43, "physics": 74}
     else:
         raise Exception("Unknown label detected")
