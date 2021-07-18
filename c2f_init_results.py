@@ -493,7 +493,7 @@ if __name__ == "__main__":
                 else:
                     child_df = pd.concat([child_df, temp_child_df])
             child_df["label"] = [ch] * len(child_df)
-            if ind == 1:
+            if ind == 0:
                 df_train = child_df
             else:
                 df_train = pd.concat([df_train, child_df])
